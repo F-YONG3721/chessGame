@@ -1,5 +1,6 @@
-# 測試儀動棋子的方法是否正確
+# 測試移動棋子的方法是否正確
 
+# 棋盤
 chessBoard = [
     [],       # 1
     [],       # 2
@@ -7,6 +8,7 @@ chessBoard = [
     []
 ]    # a  b  c
 
+# 初始化棋盤
 def initialBoard():
     global chessBoard
 
@@ -19,7 +21,7 @@ def initialBoard():
             else:
                 chessBoard[i].append(" ")
 
-
+# 印出棋盤
 def printBoard():
     print("-"*24)
     print(f"{'test chess move':^24s}")
