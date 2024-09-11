@@ -34,8 +34,8 @@ def printBoard():
         
     
 def main():
-    initialBoard()
+    initialBoard() # 初始化棋盤
     # print(chessBoard)
-    printBoard()
+    printBoard() # 印出棋盤
 
 main()
