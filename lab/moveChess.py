@@ -76,35 +76,35 @@ class Chess:
             # print(f"Knight x: {x}, y: {y}__\noriX: {originalX}, oriY: {originalY}")
             # 把棋盤想像成一個坐標系, 騎士移動的規則符合下列的計算
             if (x == originalX + 1 and y == originalY + 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("1")
+                # print("1")
                 return True
             
             elif (x == originalX + 1 and y == originalY - 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("2")
+                # print("2")
                 return True
             
             elif (x == originalX - 1 and y == originalY - 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("3")
+                # print("3")
                 return True
             
             elif (x == originalX - 1 and y == originalY + 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("4")
+                # print("4")
                 return True
             
             elif (x == originalX + 2 and y == originalY + 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):#
-                print("1")
+                # print("1")
                 return True
             
             elif (x == originalX + 2 and y == originalY - 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("2")
+                # print("2")
                 return True
             
             elif (x == originalX - 2 and y == originalY - 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("3")
+                # print("3")
                 return True
             
             elif (x == originalX - 2 and y == originalY + 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
-                print("4")
+                # print("4")
                 return True            
             
             else:
@@ -153,7 +153,7 @@ def printBoard():
         
 # 輸入位置
 def inputlocation():
-    locationList = input("請輸入棋子要移動到的位置(ex: a3 b1)").split(sep=' ')
+    locationList = input("請輸入棋子要移動到的位置(ex: a3 b1): ").split(sep=' ')
     check = '' #
     # 檢驗資料輸入格式是否正確
     if len(locationList) != 2:
@@ -170,15 +170,17 @@ def inputlocation():
         for j in range(len(i)):
             check = i[j]
             if j == 0:
-                print(f"typecheck: {type(check)}")
+                # print(f"typecheck: {type(check)}")
                 if check.isalpha() == False:
                     print(f"資料輸入錯誤: 應為字母\n錯誤:{check}\n{check.isalpha()}")
-                    inputlocation()                    
+                    inputlocation()
+                    return False                    
 
             if j == 1:
                 if check.isdigit() == False:
                     print(f"資料輸入錯誤: 應為數字\n錯誤:{check}\n{check.isdigit()}")
                     inputlocation()
+                    return False
 
 
     print(f"locationList: {locationList}")
@@ -251,9 +253,8 @@ blackRook = Chess("BlackRook")
 
 
 def main():
+    os.system("cls")
     initialBoard() # 初始化棋盤
-    
-    printBoard() # 印出棋盤
     
     #將棋子放到棋盤上
     whiteKnight.setInitPosition('a', '3')
@@ -283,9 +284,9 @@ def main():
             pass
         
         finally:
+            a = input("輸入[exit]退出, [enter]繼續:")
             os.system("cls")
             printBoard()
-            a = input("輸入任意字符退出, [enter]繼續:")
 
 
 
