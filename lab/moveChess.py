@@ -2,20 +2,24 @@ import os
 # 測試移動棋子的方法是否正確
 
 # 棋盤
-chessBoard = [
-    [],       # 1
-    [],       # 2
-    [],       # 3
-    []
-]    # a  b  c
+#----------------
+# 1 |   |   |   |
+#----------------
+# 2 |   |   |   |
+#----------------
+# 3 |   |   |   |
+#----------------
+#   | a | b | c | 
+
+chessBoard = [[" " for j in range(4)] for i in range(4)] # 建立棋盤及初始化
 
 # 棋子位置的紀錄
-chessLocation = {}
+chessLocation = dict()
 
-# 棋子德物件
+# 棋子的物件
 class Chess:
     global chessBoard
-
+    global chessLocation
     # 將字串轉到對應的數字
     char2int = {
         'a' : 1,
@@ -35,10 +39,6 @@ class Chess:
     # 初始化
     def __init__(self, kind):
         self.kind = self.word2icon[kind]
-        # self.row = self.char2int[y] - 1 # 這裡-1 的目的是要對應到串列的範圍
-        # self.column = self.char2int[x]
-        # print(f"test: row: {self.row}, column: {self.column}")
-        # self.__setPosition()
 
     # 設定棋子位置
     def __setPosition(self):
@@ -53,13 +53,15 @@ class Chess:
 
     # 移動棋子
     def move(self, x, y):
-        x = self.char2int[x] 
-        y = self.char2int[y]
+        moveX = self.char2int[x] 
+        moveY = self.char2int[y]
 
-        if self.checkMove(x, y) == True:
+        if self.checkMove(moveX, moveY) == True:
+            self.checkEat(x, y) # 檢查吃否吃子 
+
             chessBoard[self.row][self.column] = ' ' # 把原本在地位置去掉
-            self.row = y - 1
-            self.column = x
+            self.row = moveY - 1
+            self.column = moveX
             self.__setPosition() # 移動到新位置
             return True
         else:
@@ -127,6 +129,19 @@ class Chess:
         else:
             print(f"沒有此種{self.kind}棋子")
             return False
+        
+    def checkEat(self, x, y):
+        location = x + y # 合併成輸入格式
+        print(f"goto: {location}")
+        moveX = self.char2int[x] # 設成物件內的格式
+        moveY = self.char2int[y]
+
+        if (chessLocation.get(location) != None):
+            chessBoard[moveY - 1][moveX] = ' ' # 移除棋盤上被吃掉的棋
+            chessLocation.pop(location) # 移除位置記錄上被吃掉的棋
+            return True
+        else:
+            return False
 
 # 初始化棋盤
 def initialBoard():
@@ -135,11 +150,11 @@ def initialBoard():
     for i in range(4):
         for j in range(4):
             if i == 3 and j != 0:
-                chessBoard[i].append(chr(96 + j))
+                chessBoard[i][j] = chr(96 + j)
             elif j == 0 and i != 3:
-                chessBoard[i].append(str(i + 1))
+                chessBoard[i][j] = str(i + 1)
             else:
-                chessBoard[i].append(" ")
+                pass 
 
 # 印出棋盤
 def printBoard():
@@ -156,107 +171,113 @@ def inputlocation():
     locationList = input("請輸入棋子要移動到的位置(ex: a3 b1): ").split(sep=' ')
     check = '' #
     # 檢驗資料輸入格式是否正確
-    if len(locationList) != 2:
+    if len(locationList) != 2: # 串列內是否只有兩個元素
         print("請輸入兩筆資料")
         inputlocation()
+        return False # 跳出函式
 
     for i in locationList:
-        if len(i) == 2:
+        if len(i) == 2: # 確認元素一內 只有兩個字元 ex: e1
             pass
         else:
             print(f"第{i}個資料錯誤\n請重新輸入")
             inputlocation()
+            return False # 跳出函式
         
-        for j in range(len(i)):
+        for j in range(len(i)): # 確認元素內符合 a1 這樣的格式 
             check = i[j]
             if j == 0:
                 # print(f"typecheck: {type(check)}")
                 if check.isalpha() == False:
                     print(f"資料輸入錯誤: 應為字母\n錯誤:{check}\n{check.isalpha()}")
                     inputlocation()
-                    return False                    
+                    return False # 跳出函式               
 
             if j == 1:
                 if check.isdigit() == False:
                     print(f"資料輸入錯誤: 應為數字\n錯誤:{check}\n{check.isdigit()}")
                     inputlocation()
-                    return False
+                    return False # 跳出函式 
 
+    # 檢查起始位置是否有放置棋子
+    if chessLocation.get(locationList[0]) == None:
+        print("此位置無放置任何棋, 請重新輸入")
+        inputlocation()
+        return False # 跳出函式
+    
+    print(f"locationList: {locationList}") #
 
-    print(f"locationList: {locationList}")
     # 移動和記錄棋子
-    if moveChess(locationList[0], locationList[1]) == True:
-        recordMoveLocation(locationList[0], locationList[1])
+    if (moveChess(locationList[0], locationList[1]) == True):  # 如果可以移動
+        recordMoveLocation(locationList[0], locationList[1]) # 則記錄此移動
     else:
+        # print(f"chessLocation.get: {chessLocation.get(locationList[0])}")
         print("此移動無效或違規, 請重新移動")
         inputlocation()
+        return False # 跳出函式
+
+    return None
 
 # 記錄移動位置
 def recordMoveLocation(initial, final):
     chessTemporary = object()
-    x = int()
-    y = int()
-    # 檢查 chessLocation 是否存在
-    if chessLocation.get(initial) != "None":
-        # 更改資料
-        chessTemporary = chessLocation.get(initial)
-        chessLocation.pop(initial) # 1. 先刪除初始位置(initail)
-        chessLocation.setdefault(final, chessTemporary) # 2. 寫入 位置(final) : 棋子物件名稱
 
-        
+    # 更改資料
+    chessTemporary = chessLocation.get(initial)
+    chessLocation.pop(initial) # 1. 先刪除初始位置(initail)
+    chessLocation.setdefault(final, chessTemporary) # 2. 寫入 位置(final) : 棋子物件名稱
 
 # 移動
 def moveChess(initial, final):
     # 移動棋子
-    if (chessLocation[initial] != 'None'):
-        # 1. 把final 分成 x(字串型態英文字母), y(字串型態數字)
-        for i in range(len(final)):
-            if i == 0:
-                x = final[i]
-            elif i == 1:
-                y = final[i]
-            else:
-                print("move location error")
-
-        # 錯誤在這: 原本是先改位置在移動棋盤, 但我換成先移動再改棋盤就無效了
-        # 2. 利用if 判斷式找到final 位置對應的物件 ex: if chessLocation[final] == whiteBishop:
-        if chessLocation[initial] == whiteKnight: # 3. 執行該物件的 move ex: whiteBishop.move(x, y) 
-            if whiteKnight.move(x, y) == False:
-                return False
-            else:
-                return True
-
-        elif chessLocation[initial] == whiteBishop:
-            if whiteBishop.move(x, y) == False:
-                return False
-            else:
-                return True
-
-        elif chessLocation[initial] == blackRook:
-            if blackRook.move(x, y) == False:
-                return False
-            else:
-                return True
-
+    
+    # 1. 把final 分成 x(字串型態英文字母), y(字串型態數字)
+    for i in range(len(final)):
+        if i == 0:
+            x = final[i]
+        elif i == 1:
+            y = final[i]
         else:
-            print(f"error -- not this chess!")
+            print("move location error")
 
-        print(f"目前的移動狀態: {chessLocation}")
+    # 錯誤在這: 原本是先改位置在移動棋盤, 但我換成先移動再改棋盤就無效了 (# 已解決)
+    # 2. 利用if 判斷式找到final 位置對應的物件 ex: if chessLocation[final] == whiteBishop:
+    if chessLocation[initial] == whiteKnight: # 3. 執行該物件的 move ex: whiteBishop.move(x, y) 
+        if whiteKnight.move(x, y) == False: # move 會回傳此移動是否錯誤
+            return False
+        else:
+            return True
 
-# 記錄
+    elif chessLocation[initial] == whiteBishop:
+        if whiteBishop.move(x, y) == False:
+            return False
+        else:
+            return True
 
+    elif chessLocation[initial] == blackRook:
+        if blackRook.move(x, y) == False:
+            return False
+        else:
+            return True
+
+    else:
+        print(f"error -- not this chess!")
+    
+    print(f"目前的移動狀態: {chessLocation}")
+
+# 建立物件
 whiteKnight = Chess("WhiteKnight")
 whiteBishop = Chess("WhiteBishop")
 blackRook = Chess("BlackRook")
 
 
 
-
-def main():
+# debug用
+def checkflow():
     os.system("cls")
-    initialBoard() # 初始化棋盤
+    initialBoard()
     
-    #將棋子放到棋盤上
+
     whiteKnight.setInitPosition('a', '3')
     chessLocation.setdefault("a3", whiteKnight)
 
@@ -265,21 +286,42 @@ def main():
 
     blackRook.setInitPosition('a', '1')
     chessLocation.setdefault("a1", blackRook)
+    printBoard()
 
-    printBoard() # 印出棋盤
+    a = ""
 
-    # if (chessLocation["a3"] == whiteKnight):
-    #     print("成功!!!")
+    while a != "exit":
+
+        inputlocation()
+        a = input("exit 退出: ")
+        os.system("cls")
+        printBoard()
+
+#
+def main():
+    initialBoard() # 初始化棋盤
     
+    #將棋子放到棋盤上
+    whiteKnight.setInitPosition('a', '3') # 定位
+    chessLocation.setdefault("a3", whiteKnight) # 記錄位置
+
+    whiteBishop.setInitPosition('b', '3')
+    chessLocation.setdefault("b3", whiteBishop)
+
+    blackRook.setInitPosition('a', '1')
+    chessLocation.setdefault("a1", blackRook)
+
+    os.system("cls")
+    printBoard()
     # 移動流程測試
     a = ""
     while a != 'exit':
         try: 
-                inputlocation()
+            
+            inputlocation()
                 
         except Exception as e:
-            print(e)
-            print("error!!!")
+            print(f"{'-' * 6}\n*** error: {e}\n{'-' * 6}")
         else:
             pass
         
@@ -287,7 +329,9 @@ def main():
             a = input("輸入[exit]退出, [enter]繼續:")
             os.system("cls")
             printBoard()
+            
 
 
 
 main()
+# checkflow()
