@@ -1,8 +1,8 @@
 import os
 
 ###########################################
-#       20241001把棋盤從3x3 --> 5x5        #
-#                                         #
+#       20241001把棋盤從3x3 --> 5x5        #  
+# 提醒: 若要擴大棋盤範圍 Class的char2int要改#
 #                                         #
 ###########################################
 
@@ -18,7 +18,11 @@ import os
 #----------------
 #   | a | b | c | 
 
-chessBoard = [[" " for j in range(4)] for i in range(4)] # 建立棋盤及初始化
+BOARD_ROW_MAX_LIMIT = 6 # 棋盤垂直的最大範圍 (n + 1)
+BOARD_COLUMN_MAX_LIMIT = 6 # 棋盤水平的最大範圍 (n + 1)
+
+chessBoard = [[" " for j in range(BOARD_COLUMN_MAX_LIMIT)] for i in range(BOARD_ROW_MAX_LIMIT)] # 建立棋盤及初始化
+
 
 # 棋子位置的紀錄
 chessLocation = dict()
@@ -32,9 +36,13 @@ class Chess:
         'a' : 1,
         'b' : 2,
         'c' : 3,
+        'd' : 4,
+        'e' : 5,
         '1' : 1,
         '2' : 2,
-        '3' : 3
+        '3' : 3,
+        '4' : 4,
+        '5' : 5
     }
     # 將棋子的名稱轉到對應的icon
     word2icon = {
@@ -84,45 +92,45 @@ class Chess:
         if self.kind == '♘':
             # print(f"Knight x: {x}, y: {y}__\noriX: {originalX}, oriY: {originalY}")
             # 把棋盤想像成一個坐標系, 騎士移動的規則符合下列的計算
-            if (x == originalX + 1 and y == originalY + 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            if (x == originalX + 1 and y == originalY + 2) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("1")
                 return True
             
-            elif (x == originalX + 1 and y == originalY - 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX + 1 and y == originalY - 2) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("2")
                 return True
             
-            elif (x == originalX - 1 and y == originalY - 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX - 1 and y == originalY - 2) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("3")
                 return True
             
-            elif (x == originalX - 1 and y == originalY + 2) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX - 1 and y == originalY + 2) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("4")
                 return True
             
-            elif (x == originalX + 2 and y == originalY + 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):#
+            elif (x == originalX + 2 and y == originalY + 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):#
                 # print("1")
                 return True
             
-            elif (x == originalX + 2 and y == originalY - 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX + 2 and y == originalY - 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("2")
                 return True
             
-            elif (x == originalX - 2 and y == originalY - 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX - 2 and y == originalY - 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("3")
                 return True
             
-            elif (x == originalX - 2 and y == originalY + 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            elif (x == originalX - 2 and y == originalY + 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 # print("4")
                 return True            
             
             else:
-                print("move error!")
+                print(f"move error!| originalX: {originalX}, originalY: {originalY}\n x: {x}, y: {y}")
                 return False
 
         elif self.kind == '♜':
             # 城堡的移動規則: 只要一軸固定不變, 另一軸可以任意移動
-            if (y == originalY or x == originalX) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            if (y == originalY or x == originalX) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
             else:
                 print("move error!")
@@ -130,7 +138,7 @@ class Chess:
 
         elif self.kind == '♗':
             # 主教的移動規則: 和前次座標相減然後(x / y) ** 2 == 1
-            if (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < 4 and x >= 0) and (y < 4 and y >= 0)):
+            if (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
 
         else:
@@ -154,21 +162,21 @@ class Chess:
 def initialBoard():
     global chessBoard
 
-    for i in range(4):
-        for j in range(4):
-            if i == 3 and j != 0:
+    for i in range(BOARD_ROW_MAX_LIMIT):
+        for j in range(BOARD_COLUMN_MAX_LIMIT):
+            if i == (BOARD_ROW_MAX_LIMIT - 1) and j != 0:
                 chessBoard[i][j] = chr(96 + j)
-            elif j == 0 and i != 3:
+            elif j == 0 and i != (BOARD_ROW_MAX_LIMIT - 1):
                 chessBoard[i][j] = str(i + 1)
             else:
                 pass 
 
 # 印出棋盤
 def printBoard():
-    print("-"*24)
+    print("-"*(6*BOARD_COLUMN_MAX_LIMIT))
     print(f"{'test chess move':^24s}")
     for i in range(len(chessBoard)):
-        print("-"*24)
+        print("-"*(6*BOARD_COLUMN_MAX_LIMIT))
         for j in range(len(chessBoard[i])):
             print(f"{chessBoard[i][j]:^5s}|", end='')
         print()
