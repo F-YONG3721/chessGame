@@ -3,7 +3,10 @@ import os
 ###########################################
 #       20241001把棋盤從3x3 --> 5x5        #  
 # 提醒: 若要擴大棋盤範圍 Class的char2int要改#
-#                                         #
+# 增新棋子需要改動的地方：                  #
+# 1. class的word2icon                     #
+# 2. class的checkMove                     #
+# 3. moveChess()                          #
 ###########################################
 
 # 測試移動棋子的方法是否正確
@@ -47,8 +50,12 @@ class Chess:
     # 將棋子的名稱轉到對應的icon
     word2icon = {
         "WhiteKnight" : '♘',
+        "WhiteBishop" : '♗',
+        "WhiteQueen" : '♕',
+        "BlackKing" : '♚',
         "BlackRook" : '♜',
-        "WhiteBishop" : '♗'
+        "BlackQueen": '♛',
+        "BlackPawn" : '♟'
     }
     
     # 初始化
@@ -81,6 +88,7 @@ class Chess:
             return True
         else:
             print("此移動不符合規則")
+            print(f"x: {x}, y: {y}\noriginalX: {self.column}, originalY: {self.row + 1}")
             return False
             
 
@@ -139,6 +147,18 @@ class Chess:
         elif self.kind == '♗':
             # 主教的移動規則: 和前次座標相減然後(x / y) ** 2 == 1
             if (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+                return True
+
+        elif self.kind == '♕' or self.kind == '♛':
+            if ((y == originalY or x == originalX)) or (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+                return True
+
+        elif self.kind == '♚':
+            if (((y == originalY + 1 or y == originalY - 1) and (x == originalX)) or ((x == originalX + 1 or x == originalX -1) and (y == originalY))) or (((originalX - x) ** 2 == 1 and (originalY - y) ** 2 == 1) and (((originalX - x) // (originalY - y)) ** 2 == 1)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+                return True
+
+        elif self.kind == '♟':
+            if ((y == originalY - 1) and (x == originalX)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
 
         else:
@@ -274,6 +294,30 @@ def moveChess(initial, final):
             return False
         else:
             return True
+        
+    elif chessLocation[initial] == whiteQueen:
+        if whiteQueen.move(x, y) == False:
+            return False
+        else:
+            return True
+
+    elif chessLocation[initial] == blackQueen:
+        if blackQueen.move(x, y) == False:
+            return False
+        else:
+            return True
+    
+    elif chessLocation[initial] == blackPawn:
+        if blackPawn.move(x, y) == False:
+            return False
+        else:
+            return True
+
+    elif chessLocation[initial] == blackKing:
+        if blackKing.move(x, y) == False:
+            return False
+        else:
+            return True
 
     else:
         print(f"error -- not this chess!")
@@ -284,6 +328,10 @@ def moveChess(initial, final):
 whiteKnight = Chess("WhiteKnight")
 whiteBishop = Chess("WhiteBishop")
 blackRook = Chess("BlackRook")
+whiteQueen = Chess("WhiteQueen")
+blackQueen = Chess("BlackQueen")
+blackPawn = Chess("BlackPawn")
+blackKing = Chess("BlackKing")
 
 
 
@@ -325,6 +373,18 @@ def main():
 
     blackRook.setInitPosition('a', '1')
     chessLocation.setdefault("a1", blackRook)
+
+    whiteQueen.setInitPosition('c', '3')
+    chessLocation.setdefault("c3", whiteQueen)
+
+    blackQueen.setInitPosition('d', '5')
+    chessLocation.setdefault("d5", blackQueen)
+
+    blackPawn.setInitPosition('a', '5')
+    chessLocation.setdefault("a5", blackPawn)
+
+    blackKing.setInitPosition('c', '5')
+    chessLocation.setdefault("c5", blackKing)
 
     os.system("cls")
     printBoard()
