@@ -6,7 +6,9 @@ import os
 # 增新棋子需要改動的地方：                  #
 # 1. class的word2icon                     #
 # 2. class的checkMove                     #
-# 3. moveChess()                          #
+# 3. moveChess()                          
+#  
+# 20241002把棋盤擴到8x8
 ###########################################
 
 # 測試移動棋子的方法是否正確
@@ -21,8 +23,8 @@ import os
 #----------------
 #   | a | b | c | 
 
-BOARD_ROW_MAX_LIMIT = 6 # 棋盤垂直的最大範圍 (n + 1)
-BOARD_COLUMN_MAX_LIMIT = 6 # 棋盤水平的最大範圍 (n + 1)
+BOARD_ROW_MAX_LIMIT = 9 # 棋盤垂直的最大範圍 (n + 1)
+BOARD_COLUMN_MAX_LIMIT = 9 # 棋盤水平的最大範圍 (n + 1)
 
 chessBoard = [[" " for j in range(BOARD_COLUMN_MAX_LIMIT)] for i in range(BOARD_ROW_MAX_LIMIT)] # 建立棋盤及初始化
 
@@ -41,11 +43,17 @@ class Chess:
         'c' : 3,
         'd' : 4,
         'e' : 5,
+        'f' : 6,
+        'g' : 7,
+        'h' : 8,
         '1' : 1,
         '2' : 2,
         '3' : 3,
         '4' : 4,
-        '5' : 5
+        '5' : 5,
+        '6' : 6,
+        '7' : 7,
+        '8' : 8
     }
     # 將棋子的名稱轉到對應的icon
     word2icon = {
@@ -96,7 +104,7 @@ class Chess:
     def checkMove(self, x, y):
         originalX = self.column
         originalY = self.row + 1 # 這裡會加一是因為我想把0去掉比較方便計算(0, 1, 2) → (1, 2, 3)
-
+        print(f"-----\ncheck Test\nx: {x}, y: {y}\n-----")#
         if self.kind == '♘':
             # print(f"Knight x: {x}, y: {y}__\noriX: {originalX}, oriY: {originalY}")
             # 把棋盤想像成一個坐標系, 騎士移動的規則符合下列的計算
@@ -146,20 +154,30 @@ class Chess:
 
         elif self.kind == '♗':
             # 主教的移動規則: 和前次座標相減然後(x / y) ** 2 == 1
-            if (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+            if (((originalX - x) / (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
 
         elif self.kind == '♕' or self.kind == '♛':
-            if ((y == originalY or x == originalX)) or (((originalX - x) // (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+            if (((y == originalY or x == originalX)) or (((originalX - x) / (originalY - y)) ** 2 == 1)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+                print(f"-----\nQueen 移動檢測: \nx: {x}, y: {y}\noriginalX: {originalX}, originalY: {originalY}\n-----")#
                 return True
+            else:
+                print("move error!")
+                return False
 
         elif self.kind == '♚':
             if (((y == originalY + 1 or y == originalY - 1) and (x == originalX)) or ((x == originalX + 1 or x == originalX -1) and (y == originalY))) or (((originalX - x) ** 2 == 1 and (originalY - y) ** 2 == 1) and (((originalX - x) // (originalY - y)) ** 2 == 1)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
+            else:
+                print("move error")
+                return False
 
         elif self.kind == '♟':
             if ((y == originalY - 1) and (x == originalX)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
+            else:
+                print("move error")
+                return False
 
         else:
             print(f"沒有此種{self.kind}棋子")
@@ -194,7 +212,7 @@ def initialBoard():
 # 印出棋盤
 def printBoard():
     print("-"*(6*BOARD_COLUMN_MAX_LIMIT))
-    print(f"{'test chess move':^24s}")
+    print(f"{'test chess move':^48s}")
     for i in range(len(chessBoard)):
         print("-"*(6*BOARD_COLUMN_MAX_LIMIT))
         for j in range(len(chessBoard[i])):
