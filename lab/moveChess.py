@@ -57,12 +57,17 @@ class Chess:
     }
     # 將棋子的名稱轉到對應的icon
     word2icon = {
-        "WhiteKnight" : '♘',
-        "WhiteBishop" : '♗',
+        "WhiteKing" : '♔',
         "WhiteQueen" : '♕',
+        "WhiteBishop" : '♗',
+        "WhiteKnight" : '♘',
+        "WhiteRook" : '♖',
+        "WhitePawn" : '♙',
         "BlackKing" : '♚',
+        "BlackQueen" : '♛',
+        "BlackBishop" : '♝',
+        "BlackKnight" : '♞',
         "BlackRook" : '♜',
-        "BlackQueen": '♛',
         "BlackPawn" : '♟'
     }
     
@@ -105,7 +110,7 @@ class Chess:
         originalX = self.column
         originalY = self.row + 1 # 這裡會加一是因為我想把0去掉比較方便計算(0, 1, 2) → (1, 2, 3)
         print(f"-----\ncheck Test\nx: {x}, y: {y}\n-----")#
-        if self.kind == '♘':
+        if self.kind == '♘' or self.kind == '♞':
             # print(f"Knight x: {x}, y: {y}__\noriX: {originalX}, oriY: {originalY}")
             # 把棋盤想像成一個坐標系, 騎士移動的規則符合下列的計算
             if (x == originalX + 1 and y == originalY + 2) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
@@ -144,7 +149,7 @@ class Chess:
                 print(f"move error!| originalX: {originalX}, originalY: {originalY}\n x: {x}, y: {y}")
                 return False
 
-        elif self.kind == '♜':
+        elif self.kind == '♖' or self.kind == '♜':
             # 城堡的移動規則: 只要一軸固定不變, 另一軸可以任意移動
             if (y == originalY or x == originalX) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
@@ -152,7 +157,7 @@ class Chess:
                 print("move error!")
                 return False
 
-        elif self.kind == '♗':
+        elif self.kind == '♗' or self.kind == '♝':
             # 主教的移動規則: 和前次座標相減然後(x / y) ** 2 == 1
             if (((originalX - x) / (originalY - y)) ** 2 == 1) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
@@ -165,7 +170,7 @@ class Chess:
                 print("move error!")
                 return False
 
-        elif self.kind == '♚':
+        elif self.kind == '♔' or self.kind == '♚':
             if (((y == originalY + 1 or y == originalY - 1) and (x == originalX)) or ((x == originalX + 1 or x == originalX -1) and (y == originalY))) or (((originalX - x) ** 2 == 1 and (originalY - y) ** 2 == 1) and (((originalX - x) // (originalY - y)) ** 2 == 1)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
             else:
@@ -174,6 +179,13 @@ class Chess:
 
         elif self.kind == '♟':
             if ((y == originalY - 1) and (x == originalX)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
+                return True
+            else:
+                print("move error")
+                return False
+            
+        elif self.kind == '♙':
+            if ((y == originalY + 1) and (x == originalX)) and ((x < BOARD_COLUMN_MAX_LIMIT and x >= 0) and (y < BOARD_ROW_MAX_LIMIT and y >= 0)):
                 return True
             else:
                 print("move error")
@@ -295,61 +307,186 @@ def moveChess(initial, final):
 
     # 錯誤在這: 原本是先改位置在移動棋盤, 但我換成先移動再改棋盤就無效了 (# 已解決)
     # 2. 利用if 判斷式找到final 位置對應的物件 ex: if chessLocation[final] == whiteBishop:
-    if chessLocation[initial] == whiteKnight: # 3. 執行該物件的 move ex: whiteBishop.move(x, y) 
-        if whiteKnight.move(x, y) == False: # move 會回傳此移動是否錯誤
+    if chessLocation[initial] == whiteKing:
+        if whiteKing.move(x, y) == False:
             return False
-        else:
-            return True
-
-    elif chessLocation[initial] == whiteBishop:
-        if whiteBishop.move(x, y) == False:
-            return False
-        else:
-            return True
-
-    elif chessLocation[initial] == blackRook:
-        if blackRook.move(x, y) == False:
-            return False
-        else:
+        else: 
             return True
         
     elif chessLocation[initial] == whiteQueen:
         if whiteQueen.move(x, y) == False:
             return False
-        else:
+        else: 
             return True
+        
+    elif chessLocation[initial] == whiteBishop:
+        if whiteBishop.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
+    elif chessLocation[initial] == whiteKnight:
+        if whiteKnight.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
+    elif chessLocation[initial] == whiteRook:
+        if whiteRook.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
+    elif chessLocation[initial] == whitePawn:
+        if whitePawn.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
 
+    if chessLocation[initial] == blackKing:
+        if blackKing.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
     elif chessLocation[initial] == blackQueen:
         if blackQueen.move(x, y) == False:
             return False
-        else:
+        else: 
             return True
-    
+        
+    elif chessLocation[initial] == blackBishop:
+        if blackBishop.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
+    elif chessLocation[initial] == blackKnight:
+        if blackKnight.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
+    elif chessLocation[initial] == blackRook:
+        if blackRook.move(x, y) == False:
+            return False
+        else: 
+            return True
+        
     elif chessLocation[initial] == blackPawn:
         if blackPawn.move(x, y) == False:
             return False
-        else:
+        else: 
             return True
+        
 
-    elif chessLocation[initial] == blackKing:
-        if blackKing.move(x, y) == False:
-            return False
-        else:
-            return True
-
-    else:
-        print(f"error -- not this chess!")
+    '''
+    # if chessLocation[initial] == whiteKing:
     
+    # elif chessLocation[initial] == whiteKnight: # 3. 執行該物件的 move ex: whiteBishop.move(x, y) 
+    #     if whiteKnight.move(x, y) == False: # move 會回傳此移動是否錯誤
+    #         return False
+    #     else:
+    #         return True
+
+    # elif chessLocation[initial] == whiteBishop:
+    #     if whiteBishop.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+
+    # elif chessLocation[initial] == blackRook:
+    #     if blackRook.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+        
+    # elif chessLocation[initial] == whiteQueen:
+    #     if whiteQueen.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+
+    # elif chessLocation[initial] == blackQueen:
+    #     if blackQueen.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+    
+    # elif chessLocation[initial] == blackPawn:
+    #     if blackPawn.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+
+    # elif chessLocation[initial] == blackKing:
+    #     if blackKing.move(x, y) == False:
+    #         return False
+    #     else:
+    #         return True
+
+    # else:
+    #     print(f"error -- not this chess!")
+    '''
     print(f"目前的移動狀態: {chessLocation}")
 
+# 初始化位置
+def initialLocation():
+    whiteKing.setInitPosition('e', '1')
+    chessLocation.setdefault("e1", whiteKing)
+
+    whiteQueen.setInitPosition('d', '1')
+    chessLocation.setdefault("d1", whiteQueen)
+
+    whiteBishop.setInitPosition('c', '1')
+    chessLocation.setdefault("c1", whiteBishop)
+
+    whiteKnight.setInitPosition('b', '1')
+    chessLocation.setdefault("b1", whiteKnight)
+
+    whiteRook.setInitPosition('a', '1')
+    chessLocation.setdefault("a1", whiteRook)
+
+    whitePawn.setInitPosition('e', '2')
+    chessLocation.setdefault("e2", whitePawn)
+    
+    # blcak ----------------------------------------
+
+    blackKing.setInitPosition('e', '8')
+    chessLocation.setdefault("e8", blackKing)
+
+    blackQueen.setInitPosition('d', '8')
+    chessLocation.setdefault("d8", blackQueen)
+
+    blackBishop.setInitPosition('c', '8')
+    chessLocation.setdefault("c8", blackBishop)
+
+    blackKnight.setInitPosition('b', '8')
+    chessLocation.setdefault("b8", blackKnight)
+
+    blackRook.setInitPosition('a', '8')
+    chessLocation.setdefault("a8", blackRook)
+
+    blackPawn.setInitPosition('e', '7')
+    chessLocation.setdefault("e7", blackPawn)
+
+
+
 # 建立物件
-whiteKnight = Chess("WhiteKnight")
-whiteBishop = Chess("WhiteBishop")
-blackRook = Chess("BlackRook")
+whiteKing = Chess("WhiteKing")
 whiteQueen = Chess("WhiteQueen")
-blackQueen = Chess("BlackQueen")
-blackPawn = Chess("BlackPawn")
+whiteBishop = Chess("WhiteBishop")
+whiteKnight = Chess("WhiteKnight")
+whiteRook = Chess("WhiteRook")
+whitePawn = Chess("WhitePawn")
+
 blackKing = Chess("BlackKing")
+blackQueen = Chess("BlackQueen")
+blackBishop = Chess("BlackBishop")
+blackKnight = Chess("BlackKnight")
+blackRook = Chess("BlackRook")
+blackPawn = Chess("BlackPawn")
 
 
 
@@ -367,6 +504,7 @@ def checkflow():
 
     blackRook.setInitPosition('a', '1')
     chessLocation.setdefault("a1", blackRook)
+
     printBoard()
 
     a = ""
@@ -383,26 +521,29 @@ def main():
     initialBoard() # 初始化棋盤
     
     #將棋子放到棋盤上
-    whiteKnight.setInitPosition('a', '3') # 定位
-    chessLocation.setdefault("a3", whiteKnight) # 記錄位置
+    initialLocation()
+    # whiteKnight.setInitPosition('a', '3') # 定位
+    # chessLocation.setdefault("a3", whiteKnight) # 記錄位置
 
-    whiteBishop.setInitPosition('b', '3')
-    chessLocation.setdefault("b3", whiteBishop)
+    # whiteBishop.setInitPosition('b', '3')
+    # chessLocation.setdefault("b3", whiteBishop)
 
-    blackRook.setInitPosition('a', '1')
-    chessLocation.setdefault("a1", blackRook)
+    # blackRook.setInitPosition('a', '1')
+    # chessLocation.setdefault("a1", blackRook)
 
-    whiteQueen.setInitPosition('c', '3')
-    chessLocation.setdefault("c3", whiteQueen)
+    # whiteQueen.setInitPosition('c', '3')
+    # chessLocation.setdefault("c3", whiteQueen)
 
-    blackQueen.setInitPosition('d', '5')
-    chessLocation.setdefault("d5", blackQueen)
+    # blackQueen.setInitPosition('d', '5')
+    # chessLocation.setdefault("d5", blackQueen)
 
-    blackPawn.setInitPosition('a', '5')
-    chessLocation.setdefault("a5", blackPawn)
+    # blackPawn.setInitPosition('a', '5')
+    # chessLocation.setdefault("a5", blackPawn)
 
-    blackKing.setInitPosition('c', '5')
-    chessLocation.setdefault("c5", blackKing)
+    # blackKing.setInitPosition('c', '5')
+    # chessLocation.setdefault("c5", blackKing)
+
+    
 
     os.system("cls")
     printBoard()
