@@ -292,7 +292,7 @@ def recordMoveLocation(initial, final):
     chessLocation.pop(initial) # 1. 先刪除初始位置(initail)
     chessLocation.setdefault(final, chessTemporary) # 2. 寫入 位置(final) : 棋子物件名稱
 
-# 移動
+# 移動 : 確認是否可以移動
 def moveChess(initial, final):
     # 移動棋子
     
@@ -439,18 +439,39 @@ def initialLocation():
     whiteQueen.setInitPosition('d', '1')
     chessLocation.setdefault("d1", whiteQueen)
 
-    whiteBishop.setInitPosition('c', '1')
-    chessLocation.setdefault("c1", whiteBishop)
-
-    whiteKnight.setInitPosition('b', '1')
-    chessLocation.setdefault("b1", whiteKnight)
-
-    whiteRook.setInitPosition('a', '1')
-    chessLocation.setdefault("a1", whiteRook)
-
-    whitePawn.setInitPosition('e', '2')
-    chessLocation.setdefault("e2", whitePawn)
+    whiteBishopC.setInitPosition('c', '1')
+    chessLocation.setdefault("c1", whiteBishopC)
     
+    whiteBishopF.setInitPosition('f', '1')
+    chessLocation.setdefault("f1", whiteBishopF)
+
+    whiteKnightB.setInitPosition('b', '1')
+    chessLocation.setdefault("b1", whiteKnightB)
+    whiteKnightG.setInitPosition('g', '1')
+    chessLocation.setdefault("g1", whiteKnightG)
+
+    whiteRookA.setInitPosition('a', '1')
+    chessLocation.setdefault("a1", whiteRookA)
+    whiteRookH.setInitPosition('h', '1')
+    chessLocation.setdefault("h1", whiteRookH)
+
+    whitePawnA.setInitPosition('a', '2')
+    chessLocation.setdefault("a2", whitePawnA)
+    whitePawnB.setInitPosition('b', '2')
+    chessLocation.setdefault("b2", whitePawnB)
+    whitePawnC.setInitPosition('c', '2')
+    chessLocation.setdefault("c2", whitePawnC)
+    whitePawnD.setInitPosition('d', '2')
+    chessLocation.setdefault("d2", whitePawnD)
+    whitePawnE.setInitPosition('e', '2')
+    chessLocation.setdefault("e2", whitePawnE)
+    whitePawnF.setInitPosition('f', '2')
+    chessLocation.setdefault("f2", whitePawnF)
+    whitePawnG.setInitPosition('g', '2')
+    chessLocation.setdefault("g2", whitePawnG)
+    whitePawnH.setInitPosition('h', '2')
+    chessLocation.setdefault("h2", whitePawnH)
+
     # blcak ----------------------------------------
 
     blackKing.setInitPosition('e', '8')
@@ -459,62 +480,90 @@ def initialLocation():
     blackQueen.setInitPosition('d', '8')
     chessLocation.setdefault("d8", blackQueen)
 
-    blackBishop.setInitPosition('c', '8')
-    chessLocation.setdefault("c8", blackBishop)
+    blackBishopC.setInitPosition('c', '8')
+    chessLocation.setdefault("c8", blackBishopC)
 
-    blackKnight.setInitPosition('b', '8')
-    chessLocation.setdefault("b8", blackKnight)
+    blackKnightB.setInitPosition('b', '8')
+    chessLocation.setdefault("b8", blackKnightB)
 
-    blackRook.setInitPosition('a', '8')
-    chessLocation.setdefault("a8", blackRook)
+    blackRookA.setInitPosition('a', '8')
+    chessLocation.setdefault("a8", blackRookA)
 
-    blackPawn.setInitPosition('e', '7')
-    chessLocation.setdefault("e7", blackPawn)
+    blackPawnE.setInitPosition('e', '7')
+    chessLocation.setdefault("e7", blackPawnE)
+
+
+# 更動細節11/29:
+# 我把白方的騎都擴張了，但是在移動上抓不到位置
+# 在chessLocation上出錯
+# 原因：抓不到物件的名稱
+#      在moveChess的設計上，需要物件的名稱才能確定物件的位置。
+#      而我把所有的物件名稱都更新了，所以那邊也需要更動。
+#      否則moveChess在chessLocation抓不到位置
 
 
 
 # 建立物件
 whiteKing = Chess("WhiteKing")
 whiteQueen = Chess("WhiteQueen")
-whiteBishop = Chess("WhiteBishop")
-whiteKnight = Chess("WhiteKnight")
-whiteRook = Chess("WhiteRook")
-whitePawn = Chess("WhitePawn")
+whiteBishopC = Chess("WhiteBishop")
+whiteBishopF = Chess("WhiteBishop")
+whiteKnightB = Chess("WhiteKnight")
+whiteKnightG = Chess("WhiteKnight")
+whiteRookA = Chess("WhiteRook")
+whiteRookH = Chess("WhiteRook")
+whitePawnA = Chess("WhitePawn")
+whitePawnB= Chess("WhitePawn")
+whitePawnC = Chess("WhitePawn")
+whitePawnD = Chess("WhitePawn")
+whitePawnE = Chess("WhitePawn")
+whitePawnF = Chess("WhitePawn")
+whitePawnG = Chess("WhitePawn")
+whitePawnH = Chess("WhitePawn")
 
 blackKing = Chess("BlackKing")
 blackQueen = Chess("BlackQueen")
-blackBishop = Chess("BlackBishop")
-blackKnight = Chess("BlackKnight")
-blackRook = Chess("BlackRook")
-blackPawn = Chess("BlackPawn")
-
+blackBishopC = Chess("BlackBishop")
+blackBishopF = Chess("BlackBishop")
+blackKnightB = Chess("BlackKnight")
+blackKnightG = Chess("BlackKnight")
+blackRookA = Chess("BlackRook")
+blackRookH = Chess("BlackRook")
+blackPawnA = Chess("BlackPawn")
+blackPawnB= Chess("BlackPawn")
+blackPawnC = Chess("BlackPawn")
+blackPawnD = Chess("BlackPawn")
+blackPawnE = Chess("BlackPawn")
+blackPawnF = Chess("BlackPawn")
+blackPawnG = Chess("BlackPawn")
+blackPawnH = Chess("BlackPawn")
 
 
 # debug用
-def checkflow():
-    os.system("cls")
-    initialBoard()
+# def checkflow():
+#     os.system("cls")
+#     initialBoard()
     
 
-    whiteKnight.setInitPosition('a', '3')
-    chessLocation.setdefault("a3", whiteKnight)
+#     whiteKnight.setInitPosition('a', '3')
+#     chessLocation.setdefault("a3", whiteKnight)
 
-    whiteBishop.setInitPosition('b', '3')
-    chessLocation.setdefault("b3", whiteBishop)
+#     whiteBishop.setInitPosition('b', '3')
+#     chessLocation.setdefault("b3", whiteBishop)
 
-    blackRook.setInitPosition('a', '1')
-    chessLocation.setdefault("a1", blackRook)
+#     blackRook.setInitPosition('a', '1')
+#     chessLocation.setdefault("a1", blackRook)
 
-    printBoard()
+#     printBoard()
 
-    a = ""
+#     a = ""
 
-    while a != "exit":
+#     while a != "exit":
 
-        inputlocation()
-        a = input("exit 退出: ")
-        os.system("cls")
-        printBoard()
+#         inputlocation()
+#         a = input("exit 退出: ")
+#         os.system("cls")
+#         printBoard()
 
 #
 def main():
