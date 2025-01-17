@@ -104,7 +104,6 @@ class Chess:
             print(f"x: {x}, y: {y}\noriginalX: {self.column}, originalY: {self.row + 1}")
             return False
             
-
     # 檢查移動是否符合規定
     def checkMove(self, x, y):
         originalX = self.column
@@ -194,7 +193,8 @@ class Chess:
         else:
             print(f"沒有此種{self.kind}棋子")
             return False
-        
+
+    # 檢查是否可以吃子    
     def checkEat(self, x, y):
         location = x + y # 合併成輸入格式
         print(f"goto: {location}")
