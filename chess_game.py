@@ -16,10 +16,6 @@ class Board:
                     self.board[i][j] =  str((self.BOARD_SIZE - 1) - i)
                 elif i == self.BOARD_SIZE - 1 and j != 0:
                     self.board[i][j] = chr(96 + j)
-
-                # if(((i >= 6 and i < 8) or (i >= 0  and i < 2)) and j != 0):
-                #     print(f"Hello:{i}, {j}")
-                #     self.board[i][j] = Chess("A")
         
         # 設定棋子
         self.__setChess()
@@ -39,28 +35,21 @@ class Board:
             print()
 
     # 下棋
-    def draw(self, currentPosition, nextPosition):        
+    def draw(self, currentPosition, nextPosition):
+        # 轉換座標
         currentX = self.__standardPosition(currentPosition[0])
         currentY = self.__standardPosition(currentPosition[1])
 
         nextX = self.__standardPosition(nextPosition[0])
         nextY = self.__standardPosition(nextPosition[1])
 
-        chessKind = self.board[currentY][currentX] # 取得棋子
+        # 取得棋子類型
+        chessKind = self.board[currentY][currentX]
 
-        #check not over the board
-        if nextX  < 1 or nextX > 8 or nextY < 0 or nextY > 7:
-            return False
-        
-        # check group
-        if(type(self.board[nextY][nextX]) != str and self.board[nextY][nextX].group == chessKind.group):
-            print("Can't Eat")
-            return False
-        
-        # check move
-        if type(chessKind) != str and chessKind.checkMove(currentX, currentY, nextX, nextY):
+        # check move and draw
+        if self.__checkMoveRule(currentX, currentY, nextX, nextY):
             self.board[currentY][currentX] = " " # 清空原本位置
-            self.board[nextY][nextX] = chessKind # 下棋
+            self.board[nextY][nextX] = chessKind # 移動到新位置
             return True
         else:
             return False
@@ -101,6 +90,66 @@ class Board:
                 self.board[0][i] = Queen("♛", "black")
                 self.board[7][i] = Queen("♕", "white")
 
+    # 檢查是否符合移動規則
+    def __checkMoveRule(self, currentX, currentY, nextX, nextY):
+
+        chessKind = self.board[currentY][currentX] # 取得棋子
+        targetLocation = self.board[nextY][nextX] # 取得目標位置的狀態
+
+        #check not over the board
+        if nextX  < 1 or nextX > 8 or nextY < 0 or nextY > 7:
+            return False
+
+        # check chessKind is a chess
+        if type(chessKind) == str:
+            return False
+
+        # check group
+        if type(targetLocation) != str and targetLocation.group == chessKind.group:
+            return False
+
+        # check move and eat
+        checkBlock = self.__checkBlock(currentX, currentY, nextX, nextY)
+        checkMove = chessKind.checkMove(currentX, currentY, nextX, nextY) and type(targetLocation) == str
+        checkEat = chessKind.checkEat(currentX, currentY, nextX, nextY) and type(targetLocation) != str
+        
+        # 把小兵吃子與移動的規則區隔開來 
+        if type(chessKind) == Pawn:
+            checkMove = checkMove and type(targetLocation) == str
+        
+        # 騎士不受中間有其他棋子擋住的限制 
+        if type(chessKind) != Knight:
+            checkEat = checkEat and checkBlock
+            checkMove = checkMove and checkBlock
+
+
+        if checkMove or checkEat: 
+            return True
+        else:
+            return False
+    
+    # 檢查是否有其他棋子擋住
+    def __checkBlock(self, currentX, currentY, nextX, nextY):
+        # 找出尋找的方向
+        x = 0 if currentX == nextX else (nextX - currentX) // abs(nextX - currentX)
+        y = 0 if currentY == nextY else (nextY - currentY) // abs(nextY - currentY)
+
+        # 檢查是否有其他棋子擋住
+        while(currentX != nextX or currentY != nextY):
+            currentX += x
+            currentY += y
+            
+            # 如果檢查到要移動到的格子就跳出
+            if (currentX == nextX and currentY == nextY):
+                break
+            
+            # 如果有遇到棋子則回傳False
+            if type(self.board[currentY][currentX]) != str:
+                return False
+        
+        
+        return True
+
 class Chess:
     def __init__(self, kind, group):
         self.kind = kind
@@ -112,13 +161,19 @@ class King(Chess):
             return True
         else:
             return False
-
+    
+    def checkEat(self, x1, y1, x2, y2):
+        return self.checkMove(x1, y1, x2, y2)
+    
 class Queen(Chess):
     def checkMove(self, x1, y1, x2, y2):
         if abs(x1 - x2) == abs(y1 - y2) or x1 == x2 or y1 == y2:
             return True
         else:
             return False
+    
+    def checkEat(self, x1, y1, x2, y2):
+        return self.checkMove(x1, y1, x2, y2)
 
 class Bishop(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -126,6 +181,9 @@ class Bishop(Chess):
             return True
         else:
             return False
+    
+    def checkEat(self, x1, y1, x2, y2):
+        return self.checkMove(x1, y1, x2, y2)
 
 class Knight(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -133,8 +191,11 @@ class Knight(Chess):
             return True
         elif abs(x1 - x2) == 2 and abs(y1 - y2) == 1:
             return True
-        
-        return False
+        else:
+            return False
+    
+    def checkEat(self, x1, y1, x2, y2):
+        return self.checkMove(x1, y1, x2, y2)
 
 class Rook(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -142,6 +203,9 @@ class Rook(Chess):
             return True
         else:
             return False
+    
+    def checkEat(self, x1, y1, x2, y2):
+        return self.checkMove(x1, y1, x2, y2)
 
 class Pawn(Chess):
     firstMove = True
@@ -149,7 +213,6 @@ class Pawn(Chess):
     def checkMove(self, x1, y1, x2, y2):
         x = x2 - x1
         y = y2 - y1
-        # print(f"y: {y}")
 
         if self.firstMove:
             if((y <= 2 and self.group == "black") or (y >= -2 and self.group == "white")) and x == 0:
@@ -162,28 +225,42 @@ class Pawn(Chess):
                 return True
             else:
                 return False
+            
+    def checkEat(self, x1, y1, x2, y2):
+        x = x2 - x1
+        y = y2 - y1
 
-
-chessBoard = Board()
-
-while(True):
-    try:
-        chessBoard.print_board()
-        control = input("please input position: ").split(" ")
-        if(len(control)!= 2 and control[0] != "q"):
-            raise Exception("Input Error")
-        print(control)
-        os.system("clear")
-    except Exception as e:
-        print(f"Error: {e}")
-        control = input("continue?: ")
-        if control == "q":
-            break
-    else:
-        if(control[0] == "q"):
-            break
+        if((y == 1 and self.group == "black") or (y == -1 and self.group == "white")) and (x == 1 or x == -1):
+            self.firstMove = False
+            return True
         else:
-            if chessBoard.draw(control[0], control[1]) == False:
-                print("Can't Move")
-    # print(ord('a'))
+            return False
 
+class ChessGame:
+    def __init__(self):
+        self.chessBoard = Board()
+
+    def start(self):
+        while(True):
+            try:
+                self.chessBoard.print_board()
+                control = input("please input position: ").split(" ")
+                if(len(control)!= 2 and control[0] != "q"):
+                    raise Exception("Input Error")
+                print(control)
+            except Exception as e:
+                print(f"Error: {e}")
+                control = input("continue?: ")
+                if control == "q":
+                    break
+            else:
+                if(control[0] == "q"):
+                    break
+                else:
+                    os.system("clear")
+                    if self.chessBoard.draw(control[0], control[1]) == False:
+                        print("Can't Move")
+
+if __name__ == "__main__":
+    chessGame = ChessGame()
+    chessGame.start()
