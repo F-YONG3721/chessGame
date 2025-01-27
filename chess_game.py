@@ -43,13 +43,13 @@ class Board:
         nextX = self.__standardPosition(nextPosition[0])
         nextY = self.__standardPosition(nextPosition[1])
 
-        # 取得棋子類型
-        chessKind = self.board[currentY][currentX]
-
+        
+        
         # check move and draw
         if self.__checkMoveRule(currentX, currentY, nextX, nextY):
-            self.board[currentY][currentX] = " " # 清空原本位置
-            self.board[nextY][nextX] = chessKind # 移動到新位置
+            chessKind = self.board[currentY][currentX]  # 取得棋子類型
+            self.board[currentY][currentX] = " "        # 清空原本位置
+            self.board[nextY][nextX] = chessKind        # 移動到新位置
             return True
         else:
             return False
@@ -122,7 +122,11 @@ class Board:
             checkEat = checkEat and checkBlock
             checkMove = checkMove and checkBlock
 
-
+        # 檢查小兵是否升變(promotion)
+        if type(chessKind) == Pawn and (nextY == 0 or nextY == 7):
+            self.__checkPromotion(currentX, currentY, nextX, nextY)
+        
+        # 檢查是否符合規則
         if checkMove or checkEat: 
             return True
         else:
@@ -149,6 +153,22 @@ class Board:
         
         
         return True
+    
+    # 檢查是否升變
+    def __checkPromotion(self, currentX, currentY, nextX, nextY):
+        kind = str(input("小兵即將生變，請選擇生變後的棋子\n Queen(Q), Bishop(B), Knight(N), Rook(R): "))
+        chessKind = self.board[currentY][currentX]
+        if kind == "Q":
+            self.board[currentY][currentX] = (Queen("♕", "white") if (chessKind.group == "white") else Queen("♛", "black"))
+        elif kind == "B":
+            self.board[currentY][currentX] = (Bishop("♗", "white") if (chessKind.group == "white") else Bishop("♝", "black"))
+        elif kind == "N":
+            self.board[currentY][currentX] = (Knight("♘", "white") if (chessKind.group == "white") else Knight("♞", "black"))
+        elif kind == "R":
+            self.board[currentY][currentX] = (Rook("♖", "white") if (chessKind.group == "white") else Rook("♜", "black"))
+        else:
+            print("輸入錯誤請重新輸入")
+            self.__checkPromotion(currentX, currentY, nextX, nextY)
 
 class Chess:
     def __init__(self, kind, group):
@@ -244,22 +264,30 @@ class ChessGame:
         while(True):
             try:
                 self.chessBoard.print_board()
+
                 control = input("please input position: ").split(" ")
+                
                 if(len(control)!= 2 and control[0] != "q"):
                     raise Exception("Input Error")
+                elif(control[0] == "q"):
+                    break
+                else:
+                    os.system("clear")
+                    if self.chessBoard.draw(control[0], control[1]) == False:
+                        os.system("clear")
+                        print("Can't Move")
+
                 print(control)
             except Exception as e:
                 print(f"Error: {e}")
                 control = input("continue?: ")
                 if control == "q":
                     break
-            else:
-                if(control[0] == "q"):
-                    break
                 else:
                     os.system("clear")
-                    if self.chessBoard.draw(control[0], control[1]) == False:
-                        print("Can't Move")
+            else:
+                pass
+                
 
 if __name__ == "__main__":
     chessGame = ChessGame()
