@@ -3,7 +3,8 @@ import os
 class Board:
     BOARD_SIZE = 9
     board = list()
-
+    attackList = list()
+    
     # 初始化棋盤
     def __init__(self):
         self.board = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
@@ -19,6 +20,9 @@ class Board:
         
         # 設定棋子
         self.__setChess()
+
+        # 建立攻擊範圍表
+        self.__buildAttackList("white")
         
     # 印出棋盤 
     def print_board(self):
@@ -50,6 +54,9 @@ class Board:
             chessKind = self.board[currentY][currentX]  # 取得棋子類型
             self.board[currentY][currentX] = " "        # 清空原本位置
             self.board[nextY][nextX] = chessKind        # 移動到新位置
+
+            # 建立攻擊表
+            self.__buildAttackList(chessKind.group)
             return True
         else:
             return False
@@ -125,7 +132,7 @@ class Board:
         # 檢查小兵是否升變(promotion)
         if type(chessKind) == Pawn and (nextY == 0 or nextY == 7):
             self.__checkPromotion(currentX, currentY, nextX, nextY)
-        
+
         # 檢查是否符合規則
         if checkMove or checkEat: 
             return True
@@ -142,11 +149,15 @@ class Board:
         while(currentX != nextX or currentY != nextY):
             currentX += x
             currentY += y
-            
+
             # 如果檢查到要移動到的格子就跳出
             if (currentX == nextX and currentY == nextY):
                 break
             
+            # 如過超出邊界就跳出
+            if currentX < 1 or currentX > 8 or currentY < 0 or currentY > 7:
+                break
+
             # 如果有遇到棋子則回傳False
             if type(self.board[currentY][currentX]) != str:
                 return False
@@ -170,10 +181,88 @@ class Board:
             print("輸入錯誤請重新輸入")
             self.__checkPromotion(currentX, currentY, nextX, nextY)
 
+    # 建立攻擊範圍表
+    def __buildAttackList(self, group):
+        self.attackList = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
+
+        for currentY in range(self.BOARD_SIZE - 1):
+            for currentX in range(1, self.BOARD_SIZE):
+                
+                chessKind = self.board[currentY][currentX]
+
+                # 確認chessKind是棋子
+                if type(chessKind) == str:
+                    continue 
+                
+                # 避免後來的棋子蓋過原本棋子的攻擊範圍
+                if self.attackList[currentY][currentX] != "X":
+                    self.attackList[currentY][currentX] = chessKind.kind
+
+                # 確認是同一方的棋子
+                if chessKind.group != group:
+                    continue
+
+                # 讀取棋子攻擊的方向
+                for direction in chessKind.checkAttack():
+                    
+                    # 可以攻擊的點
+                    x = currentX + direction[0]
+                    y = currentY + direction[1]
+                    
+                    # 在棋盤內尋找可以攻擊的點
+                    while 1 <= x <= 8 and 0 <= y <= 7:
+                        targetLocation = self.board[y][x] # 棋盤上的位置
+
+                        # 小兵的特殊狀況
+                        if type(chessKind) != Pawn:
+                            checkEat = chessKind.checkEat(currentY, currentX, y, x)
+                        elif (type(targetLocation) != str and targetLocation.group != group) or type(targetLocation) == str:
+                            self.attackList[y][x] = "X"
+                            break
+                        else:
+                            break
+                            
+                        # 如果不符合吃子的規則就退出
+                        if checkEat == False:
+                            break
+                        
+                        # 如果是可以攻擊的點就畫上"X"
+                        if type(targetLocation) == str:
+                            self.attackList[y][x] = "X"
+
+                        elif targetLocation.group != group:
+                            print("test")
+                            self.attackList[y][x] = "X"
+                            break
+                        else:
+                            break
+                        
+                        # 往下個點繼續找
+                        x += direction[0]
+                        y += direction[1]
+
+    # 印出攻擊範圍表
+    def printAttackList(self):
+        for i in range(self.BOARD_SIZE):
+            print("-"*6*self.BOARD_SIZE)
+            for j in range(self.BOARD_SIZE):
+                if(i <= 7 and j > 0):
+                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+                elif(j == 0 and i != 8):
+                    print(f"{str(8-i):^5s}", end = "|")
+                elif(i > 7 and j > 0):
+                    print(f"{chr(96 + j):^5s}", end = "|")
+                else:
+                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+            
+            print()
+            
+
 class Chess:
     def __init__(self, kind, group):
         self.kind = kind
         self.group = group
+
 
 class King(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -184,7 +273,11 @@ class King(Chess):
     
     def checkEat(self, x1, y1, x2, y2):
         return self.checkMove(x1, y1, x2, y2)
+
+    def checkAttack(self):
+        return [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
     
+
 class Queen(Chess):
     def checkMove(self, x1, y1, x2, y2):
         if abs(x1 - x2) == abs(y1 - y2) or x1 == x2 or y1 == y2:
@@ -194,6 +287,10 @@ class Queen(Chess):
     
     def checkEat(self, x1, y1, x2, y2):
         return self.checkMove(x1, y1, x2, y2)
+    
+    def checkAttack(self):
+        return [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]
+
 
 class Bishop(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -204,6 +301,10 @@ class Bishop(Chess):
     
     def checkEat(self, x1, y1, x2, y2):
         return self.checkMove(x1, y1, x2, y2)
+
+    def checkAttack(self):
+        return [(1, 1), (1, -1), (-1, -1), (-1, 1)]
+
 
 class Knight(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -216,6 +317,10 @@ class Knight(Chess):
     
     def checkEat(self, x1, y1, x2, y2):
         return self.checkMove(x1, y1, x2, y2)
+    
+    def checkAttack(self):
+        return [(1, 2), (2, 1), (-1, 2), (-2, 1), (1, -2), (2, -1), (-1, -2), (-2, -1)]
+
 
 class Rook(Chess):
     def checkMove(self, x1, y1, x2, y2):
@@ -226,6 +331,10 @@ class Rook(Chess):
     
     def checkEat(self, x1, y1, x2, y2):
         return self.checkMove(x1, y1, x2, y2)
+    
+    def checkAttack(self):
+        return [(0, 1), (0, -1), (-1, 0), (1, 0)]
+
 
 class Pawn(Chess):
     firstMove = True
@@ -255,6 +364,13 @@ class Pawn(Chess):
             return True
         else:
             return False
+    
+    def checkAttack(self):
+        if self.group == "white":
+            return [(-1, -1), (1, -1)]
+        elif self.group == "black":
+            return [(-1, 1), (1, 1)]
+
 
 class ChessGame:
     def __init__(self):
@@ -264,12 +380,15 @@ class ChessGame:
         while(True):
             try:
                 self.chessBoard.print_board()
+                print("------- 分隔線 -------")
+                self.chessBoard.printAttackList()
 
                 control = input("please input position: ").split(" ")
                 
                 if(len(control)!= 2 and control[0] != "q"):
                     raise Exception("Input Error")
                 elif(control[0] == "q"):
+                    print("gameover")
                     break
                 else:
                     os.system("clear")
