@@ -2,9 +2,10 @@ import os
 
 class Board:
     BOARD_SIZE = 9
+    event = None
     board = list()
     attackList = list()
-    __enPassantDict = dict() #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
+    enPassantDict = dict() #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
     __kingLocation = dict()
 
     # 初始化棋盤
@@ -25,8 +26,11 @@ class Board:
         # 設定國王的位置
         self.__initKingLocation()
 
+        # 設定Event
+        self.event = Event()
+
         # 建立攻擊範圍表
-        self.__buildAttackList("white", self.board)
+        self.attackList = self.event.buildAttackList("white", self)
         
     # 印出棋盤 
     def print_board(self):
@@ -58,7 +62,7 @@ class Board:
             return False
         
         # 檢查是否符合易位的規則
-        if type(chessKind) == King and abs(currentX - nextX) == 2 and self.__checkCastling(currentX, currentY, nextX, nextY):
+        if type(chessKind) == King and abs(currentX - nextX) == 2 and self.event.checkCastling(currentX, currentY, nextX, nextY, self):
             # 找出城堡的位置
             x = (nextX - currentX)//abs(nextX - currentX) 
             y = currentY - nextY
@@ -84,13 +88,13 @@ class Board:
             self.board[nextY][nextX - x].setEverMove() # 城堡的位置
             
             # 建立攻擊表
-            self.__buildAttackList(chessKind.group, self.board)
-            self.__clearEnPassantDict(chessKind.group)
+            self.attackList = self.event.buildAttackList(chessKind.group, self)
+            self.clearEnPassantDict(chessKind.group)
             return True
 
 
         # 檢查是否符合移動規則
-        if self.__checkMoveRule(currentX, currentY, nextX, nextY):     
+        if self.event.checkMoveRule(currentX, currentY, nextX, nextY, self):     
             self.__draw(currentX, currentY, nextX, nextY)
             
             if(type(chessKind) == King):
@@ -100,7 +104,7 @@ class Board:
             chessKind.setEverMove() 
 
             # 建立攻擊表
-            self.__buildAttackList(chessKind.group, self.board)
+            self.attackList = self.event.buildAttackList(chessKind.group, self)
 
             return True
         else:
@@ -147,12 +151,55 @@ class Board:
             if(i == 4):
                 self.board[0][i] = Queen("♛", "black")
                 self.board[7][i] = Queen("♕", "white")
+    
+    # 印出攻擊範圍表
+    def printAttackList(self):
+        for i in range(self.BOARD_SIZE):
+            print("-"*6*self.BOARD_SIZE)
+            for j in range(self.BOARD_SIZE):
+                if(i <= 7 and j > 0):
+                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+                elif(j == 0 and i != 8):
+                    print(f"{str(8-i):^5s}", end = "|")
+                elif(i > 7 and j > 0):
+                    print(f"{chr(96 + j):^5s}", end = "|")
+                else:
+                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+            
+            print()
+    
+    # 清除過路兵許可表
+    def clearEnPassantDict(self, group):
+        # 先複製一份過路兵許可表, 避免在迴圈中刪除元素造成錯誤
+        nowEnPassantDict = self.enPassantDict.copy()
+        for chessKind in nowEnPassantDict.keys():
+            if chessKind.group == group:
+                self.enPassantDict.pop(chessKind)
+
+    # 印出過路兵許可表
+    def printEnpassantDict(self):
+        if len(self.enPassantDict) != 0:
+            print(f"en passant: \n\t", end = "")
+            for chessKind in self.enPassantDict.items():
+                print(f"[ capture: {chessKind[0].group}{chessKind[0].kind} ,  be captured: {chessKind[1].group}{chessKind[1].kind} ]", end=" ,  ")
+            print()
+
+    # 設定國王位置
+    def __initKingLocation(self):
+        self.__kingLocation["white"] = (5, 7)
+        self.__kingLocation["black"] = (5, 0)
+
+
+class Event:
+
+    def __init__(self):
+        pass
 
     # 檢查是否符合移動規則
-    def __checkMoveRule(self, currentX, currentY, nextX, nextY):
+    def checkMoveRule(self, currentX, currentY, nextX, nextY, board: Board):
 
-        chessKind = self.board[currentY][currentX] # 取得棋子
-        targetLocation = self.board[nextY][nextX] # 取得目標位置的狀態
+        chessKind = board.board[currentY][currentX] # 取得棋子
+        targetLocation = board.board[nextY][nextX] # 取得目標位置的狀態
 
         #check not over the board
         if nextX  < 1 or nextX > 8 or nextY < 0 or nextY > 7:
@@ -167,7 +214,7 @@ class Board:
             return False
 
         # check move, eat
-        checkBlock = self.__checkBlock(currentX, currentY, nextX, nextY)
+        checkBlock = self.checkBlock(currentX, currentY, nextX, nextY, board)
         checkMove = chessKind.checkMove(currentX, currentY, nextX, nextY) and type(targetLocation) == str
         checkEat = chessKind.checkEat(currentX, currentY, nextX, nextY) and type(targetLocation) != str
             
@@ -184,7 +231,7 @@ class Board:
 
         # 檢查小兵是否升變(promotion)
         if type(chessKind) == Pawn and (nextY == 0 or nextY == 7):
-            self.__checkPromotion(currentX, currentY, nextX, nextY)
+            self.checkPromotion(currentX, currentY, nextX, nextY, board)
 
         # 檢查小兵是否吃過路兵(en passant)
         if type(chessKind) == Pawn and (chessKind.checkEat(currentX, currentY, nextX, nextY) and type(targetLocation) == str):
@@ -193,38 +240,37 @@ class Board:
             opponentPawnY = None
 
             # 記錄過路兵的位置
-            if (chessKind.group == "white") and type(self.board[nextY + 1][nextX]) == Pawn:
+            if (chessKind.group == "white") and type(board.board[nextY + 1][nextX]) == Pawn:
                 opponentPawnX = nextX
                 opponentPawnY = nextY + 1
-            elif (chessKind.group == "black") and type(self.board[nextY - 1][nextX]) == Pawn:
+            elif (chessKind.group == "black") and type(board.board[nextY - 1][nextX]) == Pawn:
                 opponentPawnX = nextX
                 opponentPawnY = nextY - 1
             
             # 小兵是否可執行過路兵規則
-            if(chessKind in self.__enPassantDict.keys()) and opponentPawnX != None and opponentPawnY != None:
-                if(self.__enPassantDict.get(chessKind) == self.board[opponentPawnY][opponentPawnX]):
-                    self.board[opponentPawnY][opponentPawnX] = " " # 將被吃的小兵移除
-                    self.__clearEnPassantDict(chessKind.group)
+            if(chessKind in board.enPassantDict.keys()) and opponentPawnX != None and opponentPawnY != None:
+                if(board.enPassantDict.get(chessKind) == board.board[opponentPawnY][opponentPawnX]):
+                    board.board[opponentPawnY][opponentPawnX] = " " # 將被吃的小兵移除
+                    board.clearEnPassantDict(chessKind.group)
                     return True
         
         # 檢查小兵是否觸發過路兵規則(en passant)
         if type(chessKind) == Pawn and abs(currentY - nextY) == 2 and checkMove:
-            if (nextX - 1) >= 1 and type(self.board[nextY][nextX - 1]) == Pawn and self.board[nextY][nextX - 1].group != chessKind.group:
-                self.__enPassantDict.setdefault(self.board[nextY][nextX - 1], chessKind) # 將可被吃的棋子加入到許可表中
+            if (nextX - 1) >= 1 and type(board.board[nextY][nextX - 1]) == Pawn and board.board[nextY][nextX - 1].group != chessKind.group:
+                board.enPassantDict.setdefault(board.board[nextY][nextX - 1], chessKind) # 將可被吃的棋子加入到許可表中
             
-            if (nextX + 1) <= 8 and type(self.board[nextY][nextX + 1]) == Pawn and self.board[nextY][nextX + 1].group != chessKind.group:
-                self.__enPassantDict.setdefault(self.board[nextY][nextX + 1], chessKind)
+            if (nextX + 1) <= 8 and type(board.board[nextY][nextX + 1]) == Pawn and board.board[nextY][nextX + 1].group != chessKind.group:
+                board.enPassantDict.setdefault(board.board[nextY][nextX + 1], chessKind)
 
         # 檢查是否符合規則
         if checkMove or checkEat:
-            
-            self.__clearEnPassantDict(chessKind.group)             
+            board.clearEnPassantDict(chessKind.group)             
             return True
         else:
             return False
     
     # 檢查是否有其他棋子擋住
-    def __checkBlock(elf, currentX, currentY, nextX, nextY):
+    def checkBlock(self, currentX, currentY, nextX, nextY, board: Board):
         # 找出尋找的方向
         x = 0 if currentX == nextX else (nextX - currentX) // abs(nextX - currentX)
         y = 0 if currentY == nextY else (nextY - currentY) // abs(nextY - currentY)
@@ -243,107 +289,32 @@ class Board:
                 break
 
             # 如果有遇到棋子則回傳False
-            if type(self.board[currentY][currentX]) != str:
+            if type(board.board[currentY][currentX]) != str:
                 return False
         
         
         return True
     
     # 檢查是否升變
-    def __checkPromotion(self, currentX, currentY, nextX, nextY):
+    def checkPromotion(self, currentX, currentY, nextX, nextY, board: Board):
         kind = str(input("小兵即將生變，請選擇生變後的棋子\n Queen(Q), Bishop(B), Knight(N), Rook(R): "))
-        chessKind = self.board[currentY][currentX]
+        chessKind = board.board[currentY][currentX]
         if kind == "Q":
-            self.board[currentY][currentX] = (Queen("♕", "white") if (chessKind.group == "white") else Queen("♛", "black"))
+            board.board[currentY][currentX] = (Queen("♕", "white") if (chessKind.group == "white") else Queen("♛", "black"))
         elif kind == "B":
-            self.board[currentY][currentX] = (Bishop("♗", "white") if (chessKind.group == "white") else Bishop("♝", "black"))
+            board.board[currentY][currentX] = (Bishop("♗", "white") if (chessKind.group == "white") else Bishop("♝", "black"))
         elif kind == "N":
-            self.board[currentY][currentX] = (Knight("♘", "white") if (chessKind.group == "white") else Knight("♞", "black"))
+            board.board[currentY][currentX] = (Knight("♘", "white") if (chessKind.group == "white") else Knight("♞", "black"))
         elif kind == "R":
-            self.board[currentY][currentX] = (Rook("♖", "white") if (chessKind.group == "white") else Rook("♜", "black"))
+            board.board[currentY][currentX] = (Rook("♖", "white") if (chessKind.group == "white") else Rook("♜", "black"))
         else:
             print("輸入錯誤請重新輸入")
-            self.__checkPromotion(currentX, currentY, nextX, nextY)
+            self.checkPromotion(currentX, currentY, nextX, nextY, board)
 
-    # 建立攻擊範圍表
-    def __buildAttackList(self, group, board):
-        self.attackList = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
-
-        for currentY in range(self.BOARD_SIZE - 1):
-            for currentX in range(1, self.BOARD_SIZE):
-                
-                chessKind = board[currentY][currentX]
-
-                # 確認chessKind是棋子
-                if type(chessKind) == str:
-                    continue 
-                
-                # 避免後來的棋子蓋過原本棋子的攻擊範圍
-                if self.attackList[currentY][currentX] != "X":
-                    self.attackList[currentY][currentX] = chessKind.kind
-
-                # 確認是同一方的棋子
-                if chessKind.group != group:
-                    continue
-
-                # 讀取棋子攻擊的方向
-                for direction in chessKind.checkAttack():
-                    
-                    # 可以攻擊的點
-                    x = currentX + direction[0]
-                    y = currentY + direction[1]
-                    
-                    # 在棋盤內尋找可以攻擊的點
-                    while 1 <= x <= 8 and 0 <= y <= 7:
-                        targetLocation = self.board[y][x] # 棋盤上的位置
-
-                        # 小兵的特殊狀況
-                        if type(chessKind) != Pawn:
-                            checkEat = chessKind.checkEat(currentY, currentX, y, x)
-                        elif (type(targetLocation) != str and targetLocation.group != group) or type(targetLocation) == str:
-                            self.attackList[y][x] = "X"
-                            break
-                        else:
-                            break
-                            
-                        # 如果不符合吃子的規則就退出
-                        if checkEat == False:
-                            break
-                        
-                        # 如果是可以攻擊的點就畫上"X"
-                        if type(targetLocation) == str:
-                            self.attackList[y][x] = "X"
-
-                        elif targetLocation.group != group:
-                            self.attackList[y][x] = "X"
-                            break
-                        else:
-                            break
-                        
-                        # 往下個點繼續找
-                        x += direction[0]
-                        y += direction[1]
-
-    # 印出攻擊範圍表
-    def printAttackList(self):
-        for i in range(self.BOARD_SIZE):
-            print("-"*6*self.BOARD_SIZE)
-            for j in range(self.BOARD_SIZE):
-                if(i <= 7 and j > 0):
-                    print(f"{self.attackList[i][j]:^5s}", end = "|")
-                elif(j == 0 and i != 8):
-                    print(f"{str(8-i):^5s}", end = "|")
-                elif(i > 7 and j > 0):
-                    print(f"{chr(96 + j):^5s}", end = "|")
-                else:
-                    print(f"{self.attackList[i][j]:^5s}", end = "|")
-            
-            print()
-    
     # 檢查王車易位
-    def __checkCastling(self, currentX, currentY, nextX, nextY):
+    def checkCastling(self, currentX, currentY, nextX, nextY, board: Board):
 
-        chessKind = self.board[currentY][currentX] # 記錄國王位置
+        chessKind = board.board[currentY][currentX] # 記錄國王位置
         rookLocation = None # 記錄城堡的位置
          
         noAttack = True # 記錄移動路徑是否受到攻擊
@@ -362,11 +333,11 @@ class Board:
 
         # 檢查各項條件
         while 1 <= pointX <= 8 and 0 <= pointY <= 7:
-            currentLocation = self.board[pointY][pointX]
+            currentLocation = board.board[pointY][pointX]
 
             # 找到城堡
             if type(currentLocation) == Rook:
-                rookLocation = self.board[pointY][pointX]
+                rookLocation = board.board[pointY][pointX]
                 break # 找到城堡就退出
             
             # 確認中間沒有其他棋子
@@ -375,8 +346,8 @@ class Board:
                 noChess = False
 
             # 確認國王的移動範圍未受到攻擊
-            if abs(currentX - pointX) <= 2 and self.attackList[pointY][pointX] == "X":
-                self.printAttackList()
+            if abs(currentX - pointX) <= 2 and board.attackList[pointY][pointX] == "X":
+                board.printAttackList()
                 print(f"受到攻擊")
                 noAttack = False
 
@@ -404,27 +375,68 @@ class Board:
             return True
         else:
             return False
+    
+    # 建立攻擊範圍表
+    def buildAttackList(self, group, board: Board):
+        attackList = [[" " for i in range(board.BOARD_SIZE)] for j in range(board.BOARD_SIZE)]
 
-    # 清除過路兵許可表
-    def __clearEnPassantDict(self, group):
-        # 先複製一份過路兵許可表, 避免在迴圈中刪除元素造成錯誤
-        nowEnPassantDict = self.__enPassantDict.copy()
-        for chessKind in nowEnPassantDict.keys():
-            if chessKind.group == group:
-                self.__enPassantDict.pop(chessKind)
+        for currentY in range(board.BOARD_SIZE - 1):
+            for currentX in range(1, board.BOARD_SIZE):
+                
+                chessKind = board.board[currentY][currentX]
 
-    # 印出過路兵許可表
-    def printEnpassantDict(self):
-        if len(self.__enPassantDict) != 0:
-            print(f"en passant: \n\t", end = "")
-            for chessKind in self.__enPassantDict.items():
-                print(f"[ capture: {chessKind[0].group}{chessKind[0].kind} ,  be captured: {chessKind[1].group}{chessKind[1].kind} ]", end=" ,  ")
-            print()
+                # 確認chessKind是棋子
+                if type(chessKind) == str:
+                    continue 
+                
+                # 避免後來的棋子蓋過原本棋子的攻擊範圍
+                if attackList[currentY][currentX] != "X":
+                    attackList[currentY][currentX] = chessKind.kind
 
-    # 設定國王位置
-    def __initKingLocation(self):
-        self.__kingLocation["white"] = (5, 7)
-        self.__kingLocation["black"] = (5, 0)
+                # 確認是同一方的棋子
+                if chessKind.group != group:
+                    continue
+
+                # 讀取棋子攻擊的方向
+                for direction in chessKind.checkAttack():
+                    
+                    # 可以攻擊的點
+                    x = currentX + direction[0]
+                    y = currentY + direction[1]
+                    
+                    # 在棋盤內尋找可以攻擊的點
+                    while 1 <= x <= 8 and 0 <= y <= 7:
+                        targetLocation = board.board[y][x] # 棋盤上的位置
+
+                        # 小兵的特殊狀況
+                        if type(chessKind) != Pawn:
+                            checkEat = chessKind.checkEat(currentY, currentX, y, x)
+                        elif (type(targetLocation) != str and targetLocation.group != group) or type(targetLocation) == str:
+                            attackList[y][x] = "X"
+                            break
+                        else:
+                            break
+                            
+                        # 如果不符合吃子的規則就退出
+                        if checkEat == False:
+                            break
+                        
+                        # 如果是可以攻擊的點就畫上"X"
+                        if type(targetLocation) == str:
+                            attackList[y][x] = "X"
+
+                        elif targetLocation.group != group:
+                            attackList[y][x] = "X"
+                            break
+                        else:
+                            break
+                        
+                        # 往下個點繼續找
+                        x += direction[0]
+                        y += direction[1]
+
+        return attackList 
+
 
 class Chess:
     __evenMove = False
@@ -552,6 +564,7 @@ class Pawn(Chess):
 class ChessGame:
     __usersystem = "windows"
     __clearprompt = None
+    chessBoard = None
 
     def __init__(self):
         self.chessBoard = Board()
