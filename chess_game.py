@@ -1,4 +1,5 @@
 import os
+import copy
 
 class Board:
     BOARD_SIZE = 9
@@ -6,7 +7,7 @@ class Board:
     board = list()
     attackList = list()
     enPassantDict = dict() #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
-    __kingLocation = dict()
+    kingLocation = dict()
 
     # 初始化棋盤
     def __init__(self):
@@ -98,7 +99,7 @@ class Board:
             self.__draw(currentX, currentY, nextX, nextY)
             
             if(type(chessKind) == King):
-                self.__kingLocation[chessKind.group] = tuple([nextX, nextY])
+                self.kingLocation[chessKind.group] = tuple([nextX, nextY])
 
             # 將棋子設定成已移動過
             chessKind.setEverMove() 
@@ -186,11 +187,23 @@ class Board:
 
     # 設定國王位置
     def __initKingLocation(self):
-        self.__kingLocation["white"] = (5, 7)
-        self.__kingLocation["black"] = (5, 0)
+        self.kingLocation["white"] = (5, 7)
+        self.kingLocation["black"] = (5, 0)
+
+    # 假裝移動成功，回傳board的副本
+    def nextStatus(self, currentX, currentY, nextX, nextY, chessKind):
+        tempBoard = copy.deepcopy(self)
+        tempBoard.__draw(currentX, currentY, nextX, nextY)
+        if(type(chessKind) == King):
+                tempBoard.kingLocation[chessKind.group] = tuple([nextX, nextY])
+        return tempBoard
 
 
 class Event:
+    switchGroup: dict = {
+        "white": "black",
+        "black": "white"
+    }
 
     def __init__(self):
         pass
@@ -230,7 +243,7 @@ class Event:
             checkMove = checkMove and checkBlock
 
         # 檢查小兵是否升變(promotion)
-        if type(chessKind) == Pawn and (nextY == 0 or nextY == 7):
+        if type(chessKind) == Pawn and (nextY == 0 or nextY == 7) and checkMove:
             self.checkPromotion(currentX, currentY, nextX, nextY, board)
 
         # 檢查小兵是否吃過路兵(en passant)
@@ -263,11 +276,20 @@ class Event:
                 board.enPassantDict.setdefault(board.board[nextY][nextX + 1], chessKind)
 
         # 檢查是否符合規則
-        if checkMove or checkEat:
-            board.clearEnPassantDict(chessKind.group)             
-            return True
-        else:
+        if not (checkMove or checkEat):
             return False
+        
+        # 檢查國王是否受到攻擊
+        tempBoard: Board = board.nextStatus(currentX, currentY, nextX, nextY, chessKind)
+        kingLocation = tempBoard.kingLocation[chessKind.group]
+        attackList = self.buildAttackList(self.switchGroup[chessKind.group], tempBoard)
+        kingAttack: bool = attackList[kingLocation[1]][kingLocation[0]] == "X"
+
+        if(kingAttack):
+            return False
+
+        board.clearEnPassantDict(chessKind.group)             
+        return True
     
     # 檢查是否有其他棋子擋住
     def checkBlock(self, currentX, currentY, nextX, nextY, board: Board):
@@ -582,7 +604,7 @@ class ChessGame:
 
         os.system(self.__clearprompt) # 清空畫面
 
-        self.chessBoard.print_board()
+        self.printChessBoard()
 
         while(True):
             try:
@@ -598,13 +620,12 @@ class ChessGame:
                 os.system(self.__clearprompt)
 
                 if self.chessBoard.moveChess(control[0], control[1], currentPlayer):
-                    self.chessBoard.printAttackList()
-                    self.chessBoard.print_board()
-                    self.chessBoard.printEnpassantDict()
+                    self.printChessBoard()
                     currentPlayer = switchPlayer[currentPlayer]
                 else:
-                    self.chessBoard.print_board()
+                    self.printChessBoard()
                     print("Can't Move")
+                    
 
             except Exception as e:
                 print(f"Error: {e}")
@@ -613,6 +634,7 @@ class ChessGame:
                     break
                 else:
                     os.system(self.__clearprompt)
+                    self.printChessBoard()
             else:
                 pass
                 
@@ -631,6 +653,11 @@ class ChessGame:
                     break
             except Exception as e:
                 print(f"error: {e}")
+    
+    def printChessBoard(self):
+        self.chessBoard.printAttackList()
+        self.chessBoard.print_board()
+        self.chessBoard.printEnpassantDict()
               
 if __name__ == "__main__":
     chessGame = ChessGame()
