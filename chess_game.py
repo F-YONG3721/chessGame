@@ -5,15 +5,18 @@ class Board:
     BOARD_SIZE = 9
     event = None
     log = None
-    board = list()
-    attackList = list()
-    enPassantDict = dict() #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
-    kingLocation = dict()
+    board: list = None
+    attackList: list = None
+    enPassantDict: dict = None  #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
+    kingLocation: dict = None 
 
     # 初始化棋盤
     def __init__(self, log):
+        # 初始化所有資料
         self.board = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
         self.log = log
+        self.enPassantDict = dict()
+        self.kingLocation = {"white": (), "black": ()}
 
         for i in range(self.BOARD_SIZE):
             for j in range(self.BOARD_SIZE):
@@ -165,20 +168,43 @@ class Board:
     
     # 印出攻擊範圍表
     def printAttackList(self):
+        '''
         for i in range(self.BOARD_SIZE):
             print("-"*6*self.BOARD_SIZE)
             for j in range(self.BOARD_SIZE):
                 if(i <= 7 and j > 0):
-                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+                    print(f"{str(self.attackList[i][j]["symbol"]):^5s}", end = "|")
                 elif(j == 0 and i != 8):
                     print(f"{str(8-i):^5s}", end = "|")
                 elif(i > 7 and j > 0):
                     print(f"{chr(96 + j):^5s}", end = "|")
                 else:
-                    print(f"{self.attackList[i][j]:^5s}", end = "|")
+                    print(f"{str(self.attackList[i][j]["symbol"]):^5s}", end = "|")
             
             print()
-    
+        print('-'*9*6)
+        '''
+        for i in range(self.BOARD_SIZE):
+            print("-"*6*self.BOARD_SIZE)
+            for j in range(self.BOARD_SIZE):
+                info: dict = self.attackList[i][j]
+                if(i <= 7 and j > 0):
+                    num = len(info["attacker"])
+                    print(f"{(str(num) if num > 0 else info["symbol"]):^5s}", end = "|")
+                elif(j == 0 and i != 8):
+                    print(f"{str(8-i):^5s}", end = "|")
+                elif(i > 7 and j > 0):
+                    print(f"{chr(96 + j):^5s}", end = "|")
+                else:
+                    print(f"{info["symbol"]:^5s}", end = "|")
+            
+            print()
+        
+        print("-"*54)
+        print(f"white: {self.kingLocation["white"]}")
+        print(f"black: {self.kingLocation["black"]}")
+        print()
+
     # 清除過路兵許可表
     def clearEnPassantDict(self, group):
         # 先複製一份過路兵許可表, 避免在迴圈中刪除元素造成錯誤
@@ -201,11 +227,9 @@ class Board:
         self.kingLocation["black"] = (5, 0)
 
     # 假裝移動成功，回傳board的副本
-    def nextStatus(self, currentX, currentY, nextX, nextY, chessKind):
+    def nextStatus(self, currentX, currentY, nextX, nextY):
         tempBoard = copy.deepcopy(self)
         tempBoard.__draw(currentX, currentY, nextX, nextY)
-        if(type(chessKind) == King):
-            tempBoard.kingLocation[chessKind.group] = tuple([nextX, nextY])
         return tempBoard
 
 
@@ -298,10 +322,10 @@ class Event:
             return False
         
         # 檢查國王是否受到攻擊
-        tempBoard: Board = board.nextStatus(currentX, currentY, nextX, nextY, chessKind)
+        tempBoard: Board = board.nextStatus(currentX, currentY, nextX, nextY)
         kingLocation = tempBoard.kingLocation[chessKind.group]
         attackList = self.buildAttackList(self.switchGroup[chessKind.group], tempBoard)
-        kingAttack: bool = attackList[kingLocation[1]][kingLocation[0]] == "X"
+        kingAttack: bool = attackList[kingLocation[1]][kingLocation[0]]["symbol"] == "X"
 
         if(kingAttack):
             self.log.setCurrentEvent("ERROR the king is check")
@@ -387,7 +411,7 @@ class Event:
                 noChess = False
 
             # 確認國王的移動範圍未受到攻擊
-            if abs(currentX - pointX) <= 2 and board.attackList[pointY][pointX] == "X":
+            if abs(currentX - pointX) <= 2 and board.attackList[pointY][pointX]["symbol"] == "X":
                 board.printAttackList()
                 print(f"受到攻擊")
                 noAttack = False
@@ -419,8 +443,8 @@ class Event:
     
     # 建立攻擊範圍表
     def buildAttackList(self, group, board: Board):
-        attackList = [[" " for i in range(board.BOARD_SIZE)] for j in range(board.BOARD_SIZE)]
-
+        attackList = [[{"symbol":" ", "attacker":[]} for i in range(board.BOARD_SIZE)] for j in range(board.BOARD_SIZE)]
+        
         for currentY in range(board.BOARD_SIZE - 1):
             for currentX in range(1, board.BOARD_SIZE):
                 
@@ -429,10 +453,10 @@ class Event:
                 # 確認chessKind是棋子
                 if type(chessKind) == str:
                     continue 
-                
+
                 # 避免後來的棋子蓋過原本棋子的攻擊範圍
-                if attackList[currentY][currentX] != "X":
-                    attackList[currentY][currentX] = chessKind.kind
+                if attackList[currentY][currentX]["symbol"] != "X":
+                    attackList[currentY][currentX]["symbol"] = chessKind.kind
 
                 # 確認是同一方的棋子
                 if chessKind.group != group:
@@ -453,7 +477,8 @@ class Event:
                         if type(chessKind) != Pawn:
                             checkEat = chessKind.checkEat(currentY, currentX, y, x)
                         elif (type(targetLocation) != str and targetLocation.group != group) or type(targetLocation) == str:
-                            attackList[y][x] = "X"
+                            attackList[y][x]["symbol"] = "X"
+                            attackList[y][x]["attacker"].append(tuple([currentX, currentY]))
                             break
                         else:
                             break
@@ -464,10 +489,11 @@ class Event:
                         
                         # 如果是可以攻擊的點就畫上"X"
                         if type(targetLocation) == str:
-                            attackList[y][x] = "X"
-
+                            attackList[y][x]["symbol"] = "X"
+                            attackList[y][x]["attacker"].append(tuple([currentX, currentY]))
                         elif targetLocation.group != group:
-                            attackList[y][x] = "X"
+                            attackList[y][x]["symbol"] = "X"
+                            attackList[y][x]["attacker"].append(tuple([currentX, currentY]))
                             break
                         else:
                             break
@@ -475,7 +501,7 @@ class Event:
                         # 往下個點繼續找
                         x += direction[0]
                         y += direction[1]
-
+        
         return attackList 
 
 
