@@ -667,9 +667,8 @@ class ChessGame:
 
         os.system(self.__clearprompt) # 清空畫面
 
-        self.printChessBoard()
-
         while(True):
+            self.printChessBoard() #
             try:
                 print(f"Event: {self.log.getCurrentEvent()}")
                 control = input(f"Your move, {currentPlayer}, please input position: ").split(" ")
@@ -684,11 +683,7 @@ class ChessGame:
                 os.system(self.__clearprompt)
 
                 if self.chessBoard.moveChess(control[0], control[1], currentPlayer):
-                    self.printChessBoard()
                     currentPlayer = switchPlayer[currentPlayer]
-                else:
-                    self.printChessBoard()
-                    print("Can't Move")
                     
 
             except Exception as e:
@@ -698,7 +693,6 @@ class ChessGame:
                     break
                 else:
                     os.system(self.__clearprompt)
-                    self.printChessBoard()
             else:
                 pass
             
