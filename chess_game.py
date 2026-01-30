@@ -4,14 +4,16 @@ import copy
 class Board:
     BOARD_SIZE = 9
     event = None
+    log = None
     board = list()
     attackList = list()
     enPassantDict = dict() #{key: 儲存執行的棋子, value: 儲存可被吃的棋子}
     kingLocation = dict()
 
     # 初始化棋盤
-    def __init__(self):
+    def __init__(self, log):
         self.board = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
+        self.log = log
 
         for i in range(self.BOARD_SIZE):
             for j in range(self.BOARD_SIZE):
@@ -28,7 +30,7 @@ class Board:
         self.__initKingLocation()
 
         # 設定Event
-        self.event = Event()
+        self.event = Event(self.log)
 
         # 建立攻擊範圍表
         self.attackList = self.event.buildAttackList("white", self)
@@ -60,6 +62,7 @@ class Board:
 
         # 檢查玩家移動的是自己的棋子 
         if type(chessKind) != str and chessKind.group != playerGroup:
+            self.log.setCurrentEvent("ERROR group is not same")
             return False
         
         # 檢查是否符合易位的規則
@@ -78,7 +81,6 @@ class Board:
                 else:
                     rookCurrentX += x
                     rookCurrentY += y 
-
             
             # 易位
             self.__draw(currentX, currentY, nextX, nextY)
@@ -91,6 +93,11 @@ class Board:
             # 建立攻擊表
             self.attackList = self.event.buildAttackList(chessKind.group, self)
             self.clearEnPassantDict(chessKind.group)
+
+            # 更新日誌
+            message: str = "o-o" if abs(currentX-rookCurrentX) == 3 else "o-o-o"
+            self.log.writeChessManual(message)
+
             return True
 
 
@@ -98,15 +105,14 @@ class Board:
         if self.event.checkMoveRule(currentX, currentY, nextX, nextY, self):     
             self.__draw(currentX, currentY, nextX, nextY)
             
-            if(type(chessKind) == King):
-                self.kingLocation[chessKind.group] = tuple([nextX, nextY])
-
             # 將棋子設定成已移動過
             chessKind.setEverMove() 
 
             # 建立攻擊表
             self.attackList = self.event.buildAttackList(chessKind.group, self)
 
+            message: str = (chessKind.kind + currentPosition + nextPosition)
+            self.log.writeChessManual(message)
             return True
         else:
             return False
@@ -114,6 +120,10 @@ class Board:
     # 下棋
     def __draw(self, currentX, currentY, nextX, nextY):  
         chessKind = self.board[currentY][currentX]  # 取得棋子
+
+        if(type(chessKind) == King):
+            self.kingLocation[chessKind.group] = tuple([nextX, nextY])
+
         self.board[currentY][currentX] = " "        # 清空原本位置
         self.board[nextY][nextX] = chessKind        # 移動到新位置
 
@@ -195,18 +205,21 @@ class Board:
         tempBoard = copy.deepcopy(self)
         tempBoard.__draw(currentX, currentY, nextX, nextY)
         if(type(chessKind) == King):
-                tempBoard.kingLocation[chessKind.group] = tuple([nextX, nextY])
+            tempBoard.kingLocation[chessKind.group] = tuple([nextX, nextY])
         return tempBoard
 
 
 class Event:
+    log = None
+
     switchGroup: dict = {
         "white": "black",
         "black": "white"
     }
 
-    def __init__(self):
-        pass
+    def __init__(self, log):
+        self.log = log
+        
 
     # 檢查是否符合移動規則
     def checkMoveRule(self, currentX, currentY, nextX, nextY, board: Board):
@@ -216,14 +229,17 @@ class Event:
 
         #check not over the board
         if nextX  < 1 or nextX > 8 or nextY < 0 or nextY > 7:
+            self.log.setCurrentEvent("ERROR out of range")
             return False
 
         # check chessKind is a chess
         if type(chessKind) == str:
+            self.log.setCurrentEvent("ERROR not chess")
             return False
 
         # check group
         if type(targetLocation) != str and targetLocation.group == chessKind.group:
+            self.log.setCurrentEvent("ERROR group is same")
             return False
 
         # check move, eat
@@ -265,6 +281,7 @@ class Event:
                 if(board.enPassantDict.get(chessKind) == board.board[opponentPawnY][opponentPawnX]):
                     board.board[opponentPawnY][opponentPawnX] = " " # 將被吃的小兵移除
                     board.clearEnPassantDict(chessKind.group)
+                    self.log.setCurrentEvent("En passant")
                     return True
         
         # 檢查小兵是否觸發過路兵規則(en passant)
@@ -277,6 +294,7 @@ class Event:
 
         # 檢查是否符合規則
         if not (checkMove or checkEat):
+            self.log.setCurrentEvent("ERROR Against the rules")
             return False
         
         # 檢查國王是否受到攻擊
@@ -286,6 +304,7 @@ class Event:
         kingAttack: bool = attackList[kingLocation[1]][kingLocation[0]] == "X"
 
         if(kingAttack):
+            self.log.setCurrentEvent("ERROR the king is check")
             return False
 
         board.clearEnPassantDict(chessKind.group)             
@@ -460,6 +479,49 @@ class Event:
         return attackList 
 
 
+class Log:
+    __chessManual: list  # 記錄棋子的移動
+    __eventLog: list     # 記錄發生的事件(ex: 棋子移動, 移動錯誤, ...)
+    __step: int          # 記錄現在是第幾回合
+    currentEvent: str  # 記錄現在所發生的事件
+    
+    def __init__(self):
+        self.__chessManual = []
+        self.__eventLog = []
+        self.__step = 1
+        self.currentEvent = "Initial"
+        self.addEvent("Initial")
+    
+    def getChessManual(self):
+        return copy.deepcopy(self.__chessManual)
+    
+    def getEventLog(self):
+        return copy.deepcopy(self.__eventLog)
+
+    def getCurrentEvent(self):
+        return self.currentEvent
+    
+    def getStep(self):
+        return copy.deepcopy(self.__step)
+    
+    def writeChessManual(self, message: str):
+        self.setCurrentEvent("Move chess, "+message)
+        if self.__step != len(self.__chessManual):
+            self.__chessManual.append([message])
+        else:
+            self.__chessManual[self.__step-1].append(message)
+            self.__step += 1
+        
+        # self.addEvent(str(self.__step)+": move chess, "+message)
+
+    def addEvent(self, message: str):
+        self.__eventLog.append(str(self.__step) + ": " + message)
+
+    def setCurrentEvent(self, message: str):
+        self.addEvent(message)
+        self.currentEvent = message
+
+
 class Chess:
     __evenMove = False
     def __init__(self, kind, group): 
@@ -587,12 +649,13 @@ class ChessGame:
     __usersystem = "windows"
     __clearprompt = None
     chessBoard = None
+    log = None
 
     def __init__(self):
-        self.chessBoard = Board()
+        self.log = Log()
+        self.chessBoard = Board(self.log)
         self.setUserSystem()
         
-
     def start(self):
 
         # 簡單的交互
@@ -608,6 +671,7 @@ class ChessGame:
 
         while(True):
             try:
+                print(f"Event: {self.log.getCurrentEvent()}")
                 control = input(f"Your move, {currentPlayer}, please input position: ").split(" ")
                 
                 # 檢查是否符合輸入格式
@@ -637,6 +701,22 @@ class ChessGame:
                     self.printChessBoard()
             else:
                 pass
+            
+        print("棋譜")
+        chessManual = self.log.getChessManual()
+        
+        t: int = 1
+        for i in chessManual:
+            print(f"{t}: ", end = "")
+            for j in i:
+                print(j, end = ' ')
+            print()
+            t += 1
+        print()
+        print("事件列表")
+        for i in self.log.getEventLog():
+            print(i)
+        print()
                 
     def setUserSystem(self):
         while True:
