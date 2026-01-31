@@ -106,6 +106,10 @@ class Board:
 
         # 檢查是否符合移動規則
         if self.event.checkMoveRule(currentX, currentY, nextX, nextY, self):     
+            # 檢查小兵是否升變(promotion) 
+            if type(chessKind) == Pawn:
+                self.event.checkPromotion(currentX, currentY, nextX, nextY, self)
+
             self.__draw(currentX, currentY, nextX, nextY)
             
             # 將棋子設定成已移動過
@@ -205,6 +209,25 @@ class Board:
         print(f"black: {self.kingLocation["black"]}")
         print()
 
+    # 印出移動表
+    def printMoveList(self):
+        moveList = self.event.buildMoveList("white", self)
+        for i in range(self.BOARD_SIZE):
+            print("-"*6*self.BOARD_SIZE)
+            for j in range(self.BOARD_SIZE):
+                info: dict = moveList[i][j]
+                if(i <= 7 and j > 0):
+                    num = len(info["mover"])
+                    print(f"{(str(num) if num > 0 else info["symbol"]):^5s}", end = "|")
+                elif(j == 0 and i != 8):
+                    print(f"{str(8-i):^5s}", end = "|")
+                elif(i > 7 and j > 0):
+                    print(f"{chr(96 + j):^5s}", end = "|")
+                else:
+                    print(f"{info["symbol"]:^5s}", end = "|")
+            
+            print()
+
     # 清除過路兵許可表
     def clearEnPassantDict(self, group):
         # 先複製一份過路兵許可表, 避免在迴圈中刪除元素造成錯誤
@@ -282,10 +305,6 @@ class Event:
             checkEat = checkEat and checkBlock
             checkMove = checkMove and checkBlock
 
-        # 檢查小兵是否升變(promotion)
-        if type(chessKind) == Pawn and (nextY == 0 or nextY == 7) and checkMove:
-            self.checkPromotion(currentX, currentY, nextX, nextY, board)
-
         # 檢查小兵是否吃過路兵(en passant)
         if type(chessKind) == Pawn and (chessKind.checkEat(currentX, currentY, nextX, nextY) and type(targetLocation) == str):
             # 確認吃過路兵的方向是正確的(旁邊的小兵會被吃掉)
@@ -362,6 +381,8 @@ class Event:
     
     # 檢查是否升變
     def checkPromotion(self, currentX, currentY, nextX, nextY, board: Board):
+        if not (nextY == 0 or nextY == 7):
+            return
         kind = str(input("小兵即將生變，請選擇生變後的棋子\n Queen(Q), Bishop(B), Knight(N), Rook(R): "))
         chessKind = board.board[currentY][currentX]
         if kind == "Q":
@@ -473,16 +494,8 @@ class Event:
                     while 1 <= x <= 8 and 0 <= y <= 7:
                         targetLocation = board.board[y][x] # 棋盤上的位置
 
-                        # 小兵的特殊狀況
-                        if type(chessKind) != Pawn:
-                            checkEat = chessKind.checkEat(currentY, currentX, y, x)
-                        elif (type(targetLocation) != str and targetLocation.group != group) or type(targetLocation) == str:
-                            attackList[y][x]["symbol"] = "X"
-                            attackList[y][x]["attacker"].append(tuple([currentX, currentY]))
-                            break
-                        else:
-                            break
-                            
+                        checkEat = chessKind.checkEat(currentX, currentY, x, y) 
+
                         # 如果不符合吃子的規則就退出
                         if checkEat == False:
                             break
@@ -503,6 +516,69 @@ class Event:
                         y += direction[1]
         
         return attackList 
+
+    # 建立移動範圍表
+    def buildMoveList(self, group, board: Board):
+        moveList = [[{"symbol":" ", "mover":[]} for i in range(board.BOARD_SIZE)] for j in range(board.BOARD_SIZE)]
+        
+        for currentY in range(board.BOARD_SIZE - 1):
+            for currentX in range(1, board.BOARD_SIZE):
+                
+                chessKind = board.board[currentY][currentX]
+
+                # 確認chessKind是棋子
+                if type(chessKind) == str:
+                    continue 
+
+                # 避免後來的棋子蓋過原本棋子的攻擊範圍
+                if moveList[currentY][currentX]["symbol"] != "X":
+                    moveList[currentY][currentX]["symbol"] = chessKind.kind
+
+                # 確認是同一方的棋子
+                if chessKind.group != group:
+                    continue
+
+                other: list = []
+                if type(chessKind) == Pawn:
+                    other = [(0, -1) if (group == "white") else (0, 1)] 
+
+                # 讀取棋子攻擊的方向
+                for direction in (chessKind.checkAttack() + other):
+                    # 可以攻擊的點
+                    x = currentX + direction[0]
+                    y = currentY + direction[1]
+                    
+                    # 在棋盤內尋找可以攻擊的點
+                    while 1 <= x <= 8 and 0 <= y <= 7:
+                        targetLocation = board.board[y][x] # 棋盤上的位置
+                        patternData: dict = moveList[y][x]
+                        
+                        checkMove = chessKind.checkMove(currentX, currentY, x, y) 
+                        checkEat = chessKind.checkEat(currentX, currentY, x, y)
+
+                        if(not checkMove and type(chessKind) == Pawn):
+                            checkEat = chessKind.checkEat(currentX, currentY, x, y)
+                            
+                        # 如果不符合吃子的規則就退出
+                        if not (checkMove or checkEat):
+                            break
+                        
+                        # 如果是可以攻擊的點就畫上"X"
+                        if type(targetLocation) == str:
+                            patternData["symbol"] = "X"
+                            patternData["mover"].append(tuple([currentX, currentY]))
+                        elif targetLocation.group != group and checkEat:
+                            patternData["symbol"] = "X"
+                            patternData["mover"].append(tuple([currentX, currentY]))
+                            break
+                        else:
+                            break
+                        
+                        # 往下個點繼續找
+                        x += direction[0]
+                        y += direction[1]
+        
+        return moveList 
 
 
 class Log:
@@ -755,7 +831,8 @@ class ChessGame:
                 print(f"error: {e}")
     
     def printChessBoard(self):
-        self.chessBoard.printAttackList()
+        self.chessBoard.printMoveList()
+        # self.chessBoard.printAttackList()
         self.chessBoard.print_board()
         self.chessBoard.printEnpassantDict()
               
