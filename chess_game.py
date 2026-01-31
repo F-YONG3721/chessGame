@@ -172,22 +172,6 @@ class Board:
     
     # 印出攻擊範圍表
     def printAttackList(self):
-        '''
-        for i in range(self.BOARD_SIZE):
-            print("-"*6*self.BOARD_SIZE)
-            for j in range(self.BOARD_SIZE):
-                if(i <= 7 and j > 0):
-                    print(f"{str(self.attackList[i][j]["symbol"]):^5s}", end = "|")
-                elif(j == 0 and i != 8):
-                    print(f"{str(8-i):^5s}", end = "|")
-                elif(i > 7 and j > 0):
-                    print(f"{chr(96 + j):^5s}", end = "|")
-                else:
-                    print(f"{str(self.attackList[i][j]["symbol"]):^5s}", end = "|")
-            
-            print()
-        print('-'*9*6)
-        '''
         for i in range(self.BOARD_SIZE):
             print("-"*6*self.BOARD_SIZE)
             for j in range(self.BOARD_SIZE):
@@ -205,9 +189,6 @@ class Board:
             print()
         
         print("-"*54)
-        print(f"white: {self.kingLocation["white"]}")
-        print(f"black: {self.kingLocation["black"]}")
-        print()
 
     # 印出移動表
     def printMoveList(self):
@@ -580,6 +561,60 @@ class Event:
         
         return moveList 
 
+    # 檢查國王是否可以解除攻擊狀態
+    def isKingInCheck(self, group, board: Board):        
+        kingLocation = board.kingLocation[group]
+        kingX: int = kingLocation[0]
+        kingY: int = kingLocation[1]
+        king: Chess = board.board[kingY][kingX]
+
+        if(board.attackList[kingY][kingX]["symbol"] != "X"):
+            return True
+
+        # step1 檢查國王是否可以透過移動自己解除攻擊狀態
+        for direction in king.checkAttack():
+            x: int = direction[0]
+            y: int = direction[1]
+            if x < 1 and x > 8 or y < 0 and y > 7:
+                continue
+            if(self.checkMoveRule(kingX, kingY, kingX+x, kingY+y, board)):
+                return True
+        
+        # step2 檢查是否可以透過移動其他棋子解除國王受攻擊的狀態
+        attackList = self.buildAttackList(self.switchGroup[group], board)
+        moveList = self.buildMoveList(group, board)
+
+        # ... 對所有的攻擊者都檢查是否自己有棋子透過移動可解除...
+        for attacker in attackList[kingY][kingX]["attacker"]:
+            attackerX: int = attacker[0]
+            attackerY: int = attacker[1]
+            # 確認攻擊者的方位
+            x: int = 0 if kingX == attackerX else (attackerX-kingX) // abs(attackerX-kingX) 
+            y: int = 0 if kingY == attackerY else (attackerY-kingY) // abs(attackerY-kingY) 
+
+            currentX = kingX+x
+            currentY = kingY+y
+
+            # 讀取路線上和自己同群的棋子並且確認它可不可以到這個點 
+            while 1 <= currentX <= 8 and 0 <= currentY <= 7:
+                # 遍歷路線上的己方棋子
+                for friendlyPiece in moveList[currentY][currentX]["mover"]:
+                    friendlyPieceX = friendlyPiece[0]
+                    friendlyPieceY = friendlyPiece[1]
+
+                    if(self.checkMoveRule(friendlyPieceX, friendlyPieceY, currentX, currentY, board)):
+                        return True
+                
+                # 當遍歷到攻擊者時就退出
+                if(currentX == attackerX and currentY == attackerY):
+                    break
+
+                currentX += x
+                currentY += y
+        # 確認國王到攻擊者的位置
+        # 對每個位置找有沒有自己的棋子可以到
+        return False
+
 
 class Log:
     __chessManual: list  # 記錄棋子的移動
@@ -614,8 +649,6 @@ class Log:
             self.__chessManual[self.__step-1].append(message)
             self.__step += 1
         
-        # self.addEvent(str(self.__step)+": move chess, "+message)
-
     def addEvent(self, message: str):
         self.__eventLog.append(str(self.__step) + ": " + message)
 
@@ -776,16 +809,20 @@ class ChessGame:
                 control = input(f"Your move, {currentPlayer}, please input position: ").split(" ")
                 
                 # 檢查是否符合輸入格式
-                if(len(control)!= 2 and control[0] != "q"):
+                if(not self.checkFormat(control)):
                     raise Exception("Input Error")
                 elif(control[0] == "q"):
                     print("gameover")
                     break
                 
                 os.system(self.__clearprompt)
-
+                
+                # 我必須在這裡判斷遊戲是否進行下去
                 if self.chessBoard.moveChess(control[0], control[1], currentPlayer):
                     currentPlayer = switchPlayer[currentPlayer]
+                    if(not self.checkGameContinue(currentPlayer)):
+                        self.printChessBoard()
+                        break
                     
 
             except Exception as e:
@@ -797,22 +834,9 @@ class ChessGame:
                     os.system(self.__clearprompt)
             else:
                 pass
+
+        self.printLog()
             
-        print("棋譜")
-        chessManual = self.log.getChessManual()
-        
-        t: int = 1
-        for i in chessManual:
-            print(f"{t}: ", end = "")
-            for j in i:
-                print(j, end = ' ')
-            print()
-            t += 1
-        print()
-        print("事件列表")
-        for i in self.log.getEventLog():
-            print(i)
-        print()
                 
     def setUserSystem(self):
         while True:
@@ -835,7 +859,50 @@ class ChessGame:
         # self.chessBoard.printAttackList()
         self.chessBoard.print_board()
         self.chessBoard.printEnpassantDict()
-              
+        # print(f"is black king in check: {self.chessBoard.event.isKingInCheck("black", copy.deepcopy(self.chessBoard))}")
+        
+    def printLog(self):
+        print("棋譜")
+        chessManual = self.log.getChessManual()
+        
+        t: int = 1
+        for i in chessManual:
+            print(f"{t}: ", end = "")
+            for j in i:
+                print(j, end = ' ')
+            print()
+            t += 1
+        print()
+        print("事件列表")
+        for i in self.log.getEventLog():
+            print(i)
+        print()
+
+    def checkFormat(self, control):
+        if(len(control) != 2 and control[0] != "q"):
+            return False
+        
+        if(control[0] != "q" and len(control[0]) != 2 and len(control[1]) != 2):
+            return False
+        
+        return True
+
+    def checkGameContinue(self, player):
+
+        if not self.chessBoard.event.isKingInCheck(player, self.chessBoard):
+            switchPlayer = {
+                "black":"white",
+                "white":"black"
+            }
+            print()
+            print("Gameover")
+            print(f"{player} loss")
+            print(f"{switchPlayer[player]} win")
+            print()
+            return False
+        return True
+
+
 if __name__ == "__main__":
     chessGame = ChessGame()
     chessGame.start()
