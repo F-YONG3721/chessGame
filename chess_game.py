@@ -37,21 +37,7 @@ class Board:
 
         # 建立攻擊範圍表
         self.attackList = self.event.buildAttackList("white", self)
-        
-    # 印出棋盤 
-    def print_board(self):
-        print("-"*(6*self.BOARD_SIZE))
-        print(f"{'ChessGeme':^54s}")
-        for i in range(self.BOARD_SIZE):
-            print("-"*(6*self.BOARD_SIZE))
-            for j in range(self.BOARD_SIZE):
-                if(type(self.board[i][j]) == str):
-                    print(f"{self.board[i][j]:^5s}", end="|")
-                else:
-                    print(f"{self.board[i][j].kind:^5s}", end="|")
-    
-            print()
-
+  
     # 移動棋子
     def moveChess(self, currentPosition, nextPosition, playerGroup):
         # 轉換座標
@@ -170,45 +156,6 @@ class Board:
                 self.board[0][i] = Queen("♛", "black")
                 self.board[7][i] = Queen("♕", "white")
     
-    # 印出攻擊範圍表
-    def printAttackList(self):
-        for i in range(self.BOARD_SIZE):
-            print("-"*6*self.BOARD_SIZE)
-            for j in range(self.BOARD_SIZE):
-                info: dict = self.attackList[i][j]
-                if(i <= 7 and j > 0):
-                    num = len(info["attacker"])
-                    print(f"{(str(num) if num > 0 else info["symbol"]):^5s}", end = "|")
-                elif(j == 0 and i != 8):
-                    print(f"{str(8-i):^5s}", end = "|")
-                elif(i > 7 and j > 0):
-                    print(f"{chr(96 + j):^5s}", end = "|")
-                else:
-                    print(f"{info["symbol"]:^5s}", end = "|")
-            
-            print()
-        
-        print("-"*54)
-
-    # 印出移動表
-    def printMoveList(self):
-        moveList = self.event.buildMoveList("white", self)
-        for i in range(self.BOARD_SIZE):
-            print("-"*6*self.BOARD_SIZE)
-            for j in range(self.BOARD_SIZE):
-                info: dict = moveList[i][j]
-                if(i <= 7 and j > 0):
-                    num = len(info["mover"])
-                    print(f"{(str(num) if num > 0 else info["symbol"]):^5s}", end = "|")
-                elif(j == 0 and i != 8):
-                    print(f"{str(8-i):^5s}", end = "|")
-                elif(i > 7 and j > 0):
-                    print(f"{chr(96 + j):^5s}", end = "|")
-                else:
-                    print(f"{info["symbol"]:^5s}", end = "|")
-            
-            print()
-
     # 清除過路兵許可表
     def clearEnPassantDict(self, group):
         # 先複製一份過路兵許可表, 避免在迴圈中刪除元素造成錯誤
@@ -216,14 +163,6 @@ class Board:
         for chessKind in nowEnPassantDict.keys():
             if chessKind.group == group:
                 self.enPassantDict.pop(chessKind)
-
-    # 印出過路兵許可表
-    def printEnpassantDict(self):
-        if len(self.enPassantDict) != 0:
-            print(f"en passant: \n\t", end = "")
-            for chessKind in self.enPassantDict.items():
-                print(f"[ capture: {chessKind[0].group}{chessKind[0].kind} ,  be captured: {chessKind[1].group}{chessKind[1].kind} ]", end=" ,  ")
-            print()
 
     # 設定國王位置
     def __initKingLocation(self):
@@ -235,6 +174,20 @@ class Board:
         tempBoard = copy.deepcopy(self)
         tempBoard.__draw(currentX, currentY, nextX, nextY)
         return tempBoard
+
+    # 給當前棋盤的狀態
+    def getBoard(self) -> list:
+        currentBoard = [[" " for i in range(self.BOARD_SIZE)] for j in range(self.BOARD_SIZE)]
+
+        for i in range(self.BOARD_SIZE):
+            for j in range(self.BOARD_SIZE):
+                piece = self.board[i][j]
+                if type(piece)!= str:
+                    currentBoard[i][j] = piece.kind
+                else:
+                    currentBoard[i][j] = piece
+        
+        return currentBoard
 
 
 class Event:
@@ -784,23 +737,23 @@ class Pawn(Chess):
 
 class ChessGame:
     def __init__(self):
-        self.log = Log()
         self.currentPlayer = "white"
-        self.chessBoard = Board(self.log)
         self.__usersystem = "windows"
         self.__clearprompt = "cls"
-        self.setUserSystem()
         self.switchPlayer = {
             "white" : "black",
             "black" : "white"
         }
+        self.gameCore = GameCore()
+        self.log = self.gameCore.getLog()
+        self.setUserSystem()
         
     def start(self):
         while(True):
             os.system(self.__clearprompt) # 清空畫面
+            
             self.printChessBoard() #
             print(f"Event: {self.log.getCurrentEvent()}")
-
             if(not self.checkGameContinue()):
                 break
             
@@ -820,7 +773,7 @@ class ChessGame:
                     self.printFinalInfo()
                     break
             else:
-                if self.chessBoard.moveChess(control[0], control[1], self.currentPlayer):
+                if self.gameCore.inputMove(control[0], control[1], self.currentPlayer):
                     self.currentPlayer = self.switchPlayer[self.currentPlayer]
 
     def setUserSystem(self):
@@ -840,11 +793,12 @@ class ChessGame:
                 print(f"error: {e}")
     
     def printChessBoard(self):
-        # self.chessBoard.printMoveList()
-        # self.chessBoard.printAttackList()
-        self.chessBoard.print_board()
-        self.chessBoard.printEnpassantDict()
-        # print(f"is black king in check: {self.chessBoard.event.isKingInCheck("black", copy.deepcopy(self.chessBoard))}")
+        board = self.gameCore.getBoard()
+        for i in range(board):
+            print("-"*(6*self.BOARD_SIZE))
+            for j in range(i):
+                    print(f"{j:^5s}", end="|")
+            print()
         
     def printLog(self):
         print("棋譜")
@@ -884,7 +838,7 @@ class ChessGame:
             self.printFinalInfo()
             return False
 
-        if not self.chessBoard.event.isKingInCheck(self.currentPlayer, self.chessBoard):
+        if not self.gameCore.checkGameContinue(self.currentPlayer):
             self.printFinalInfo()
             return False
 
@@ -897,6 +851,25 @@ class ChessGame:
         print(f"{self.currentPlayer} LOSS")
         print()
         self.printLog()
+
+
+class GameCore:
+    
+    def __init__(self):
+        self.log = Log()
+        self.chessBoard = Board(self.log)
+        
+    def inputMove(self, start, end, group) -> bool:
+        return self.chessBoard.moveChess(start, end, group)
+    
+    def getBoard(self):
+        return self.chessBoard.getBoard()
+
+    def getLog(self):
+        return self.log
+    
+    def checkGameContinue(self, group):
+        return self.chessBoard.event.isKingInCheck(group, self.chessBoard)
 
 if __name__ == "__main__":
     chessGame = ChessGame()
