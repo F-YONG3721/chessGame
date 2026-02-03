@@ -140,23 +140,27 @@ def runServer():
     print(f"Clinet IP and Port: {client_addr}")
     
     chessBoard = chess_game.GameCore()
+    currentEvent = chessBoard.getLog().getCurrentEvent()
     currentPlayer = "white"
     run = True
     draw = ""
-    conn.send(sendData("init", switchPlayer[COLOR], chessBoard.getBoard()))
+
+    conn.send(sendData("init", switchPlayer[COLOR], chessBoard.getBoard(), currentEvent))
     
     while run:
+        currentEvent = chessBoard.getLog().getCurrentEvent()
         os.system(CLEARPROMPT)
         printBoard(chessBoard.getBoard(), COLOR)
+        print(f"Event: {currentEvent}")
 
         if(not checkGameContinue(chessBoard, draw, currentPlayer)):
             run = False
-            conn.send(sendData("gameover", currentPlayer, chessBoard.getBoard()))
+            conn.send(sendData("gameover", currentPlayer, chessBoard.getBoard(), currentEvent))
             input("Gameover")
             break
 
         if(currentPlayer == COLOR):
-            conn.send(sendData("wait", COLOR, chessBoard.getBoard()))
+            conn.send(sendData("wait", COLOR, chessBoard.getBoard(), currentEvent))
             draw: list = input("Your turn, please input your move: ").split(" ")
             isDrawCorrect: bool = checkFormat(draw)
 
@@ -170,20 +174,14 @@ def runServer():
                 print("continue")
                 continue
         else:
-            conn.send(sendData("move", currentPlayer, chessBoard.getBoard()))
+            conn.send(sendData("move", currentPlayer, chessBoard.getBoard(), currentEvent))
             message = conn.recv(2048)
+            
             if(len(message) == 0):
                 print("end")
                 break
             
             message = json.loads(message.decode("utf-8"))
-            '''
-            if(message["command"] == "surrender"):
-                run = False
-                conn.send(sendData("gameover", currentPlayer, chessBoard.getBoard()))
-                input("Gameover")
-                break
-            '''
             if(message["command"] == "move"):
                 isDrawCorrect = checkFormat(message["move"])
                 if(not isDrawCorrect):
@@ -211,6 +209,7 @@ def runClinet():
         globals()["board"] = message["board"]
     
     printBoard(message["board"], COLOR)
+    print(f"Event: {message["info"]}")
     
     run = True
     while run:
@@ -222,6 +221,7 @@ def runClinet():
             break
         message = json.loads(message.decode("utf-8"))
         printBoard(message["board"], COLOR)
+        print(f"Event: {message["info"]}")
 
         if(message["command"] == "wait"):
             continue
