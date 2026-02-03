@@ -6,6 +6,9 @@ import os
 IP: str
 PORT: int
 COLOR: str
+MODE: str
+USEROS: str
+CLEARPROMPT: str
 
 switchPlayer: dict = {
     "white" : "black",
@@ -13,10 +16,21 @@ switchPlayer: dict = {
 }
 
 def setInfo():
-    pass
+    global USEROS, CLEARPROMPT
+    
+    while True:
+        USEROS = str(input("Please input your os(windows, macOS, linux): "))
+        if(USEROS not in ["windows", "macOS", "linux"]):
+            print("Try again")
+            continue
+        else:
+            break
+    
+    CLEARPROMPT = "cls" if USEROS == "windows" else "clear"
 
 def setMode():
-    pass
+    global MODE
+    MODE = str(input("Please input mode(online, offline):"))
 
 def setHost():
     return str(input("Please input your host: "))
@@ -73,6 +87,12 @@ def printBoard(board: list, color: str):
             print(f"{board[len(board)-1][i]:^5s}", end="|")
         print()
 
+def checkGameContinue(board: chess_game.GameCore, draw, currentPlayer) -> bool:
+    if(len(draw) == 1 and draw[0] == "surrender"):
+        return False
+    
+    return board.checkGameContinue(currentPlayer)
+
 def setIP():
     global IP
     IP = str(input("Please input IP: "))
@@ -84,14 +104,31 @@ def setPort():
 def buildServer() -> socket.socket:
     global IP, PORT
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((IP, PORT))
+    while True:
+        setIP()
+        setPort()
+        try:
+            s.bind((IP, PORT))
+        except Exception as e:
+            print(f"Exception: {e}")
+        else:
+            break
+
     s.listen(5)
     return s
 
 def buildClient():
     global IP, PORT
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((IP, PORT))
+    while True:
+        setIP()
+        setPort()
+        try:
+            s.connect((IP, PORT))
+        except Exception as e:
+            print(f"Exception: {e}")
+        else:
+            break
     return s
 
 def runServer():
@@ -105,12 +142,14 @@ def runServer():
     chessBoard = chess_game.GameCore()
     currentPlayer = "white"
     run = True
+    draw = ""
     conn.send(sendData("init", switchPlayer[COLOR], chessBoard.getBoard()))
     
     while run:
-        os.system("clear")
+        os.system(CLEARPROMPT)
         printBoard(chessBoard.getBoard(), COLOR)
-        if(not chessBoard.checkGameContinue(currentPlayer)):
+
+        if(not checkGameContinue(chessBoard, draw, currentPlayer)):
             run = False
             conn.send(sendData("gameover", currentPlayer, chessBoard.getBoard()))
             input("Gameover")
@@ -138,16 +177,17 @@ def runServer():
                 break
             
             message = json.loads(message.decode("utf-8"))
-
+            '''
             if(message["command"] == "surrender"):
                 run = False
                 conn.send(sendData("gameover", currentPlayer, chessBoard.getBoard()))
                 input("Gameover")
                 break
-
-            elif(message["command"] == "move"):
+            '''
+            if(message["command"] == "move"):
                 isDrawCorrect = checkFormat(message["move"])
                 if(not isDrawCorrect):
+                    draw = message["move"]
                     continue
 
                 if(chessBoard.inputMove(message["move"][0], message["move"][1], currentPlayer)):
@@ -175,7 +215,7 @@ def runClinet():
     run = True
     while run:
         message = client.recv(2048)
-        os.system("clear")
+        os.system(CLEARPROMPT)
         if(len(message) == 0):
             print("end")
             run = False
@@ -187,26 +227,33 @@ def runClinet():
             continue
         
         if(message["command"] == "move"):
-            
             draw = input(f"Your turn, {message["color"]}, please input your move: ").split(" ")
             client.send(sendData("move", COLOR, board="", info = "", move=draw))
         elif(message["command"] == "gameover"):
-            globals()["board"] = message["board"]
             input("Gameover")
             break
     client.close()
 
-if __name__ == "__main__":
-    mode = setMode()
-    host = setHost()
-    setIP()
-    setPort()
+def runOffline():
+    chessGame = chess_game.ChessGame()
+    chessGame.start()
 
-    if(host == "server"):
-        setColor()
-        runServer()
-    elif(host == "client"):
-        runClinet()
+if __name__ == "__main__":
+    setInfo()
+    setMode()
+
+    if(MODE == "offline"):
+        runOffline()
+    elif(MODE == "online"):
+        host = setHost()
+        if(host == "server"):
+            setColor()
+            runServer()
+        elif(host == "client"):
+            runClinet()
+        else:
+            print("Host not exist.")
+            print("Please restart.")
     
 
     
