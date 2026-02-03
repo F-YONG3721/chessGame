@@ -794,9 +794,9 @@ class ChessGame:
     
     def printChessBoard(self):
         board = self.gameCore.getBoard()
-        for i in range(board):
-            print("-"*(6*self.BOARD_SIZE))
-            for j in range(i):
+        for i in board:
+            print("-"*(6*len(i)))
+            for j in i:
                     print(f"{j:^5s}", end="|")
             print()
         
